@@ -5,43 +5,88 @@ on:
     branches: [ main, develop ]
   push:
     branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
 
 jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+      continue-on-error: true
+    
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+      continue-on-error: true
+
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    needs: security-scan
+    
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: ${{ matrix.python-version }}
         cache: 'pip'
+        cache-dependency-path: backend/requirements.txt
     
     - name: Install dependencies
       working-directory: ./backend
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-asyncio
+        pip install pytest pytest-cov pytest-asyncio pytest-mock
     
-    - name: Run tests
+    - name: Run tests with coverage
       working-directory: ./backend
       run: |
-        pytest tests/ -v --cov=. --cov-report=xml --cov-report=term
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=term --cov-report=html
     
-    - name: Upload coverage
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
         file: ./backend/coverage.xml
         flags: backend
+        name: backend-${{ matrix.python-version }}
         fail_ci_if_error: false
+      continue-on-error: true
+    
+    - name: Archive coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ matrix.python-version }}
+        path: backend/htmlcov/
+        retention-days: 7
 
   frontend-tests:
-    name: Frontend Tests
+    name: Frontend Tests & Build
     runs-on: ubuntu-latest
+    needs: security-scan
     
     steps:
     - uses: actions/checkout@v4
@@ -49,7 +94,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
     
@@ -57,12 +102,24 @@ jobs:
       working-directory: ./frontend
       run: npm ci
     
-    - name: Build
+    - name: Lint frontend code
+      working-directory: ./frontend
+      run: npm run lint || echo "Linting not configured"
+      continue-on-error: true
+    
+    - name: Build frontend
       working-directory: ./frontend
       run: npm run build
+    
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend/dist/
+        retention-days: 7
 
-  lint:
-    name: Code Linting
+  backend-lint:
+    name: Backend Code Quality
     runs-on: ubuntu-latest
     
     steps:
@@ -71,18 +128,77 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: ${{ env.PYTHON_VERSION }}
     
     - name: Install linting tools
       run: |
-        pip install flake8 black isort
+        pip install flake8 black isort pylint bandit safety
     
     - name: Run flake8
       working-directory: ./backend
-      run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       continue-on-error: true
     
     - name: Check black formatting
       working-directory: ./backend
-      run: black --check .
+      run: black --check --diff .
       continue-on-error: true
+    
+    - name: Check import sorting
+      working-directory: ./backend
+      run: isort --check-only --diff .
+      continue-on-error: true
+    
+    - name: Run bandit security checks
+      working-directory: ./backend
+      run: bandit -r . -f json -o bandit-report.json || true
+      continue-on-error: true
+    
+    - name: Check dependencies for vulnerabilities
+      working-directory: ./backend
+      run: safety check --json || true
+      continue-on-error: true
+
+  integration-check:
+    name: Integration Check
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Verify project structure
+      run: |
+        echo "Checking project structure..."
+        test -f backend/main.py || exit 1
+        test -f frontend/package.json || exit 1
+        test -f backend/requirements.txt || exit 1
+        echo "✓ Project structure verified"
+    
+    - name: Check for secrets in code
+      run: |
+        echo "Checking for potential secrets..."
+        ! grep -r "password.*=" backend/ --include="*.py" | grep -v "REDIS_PASSWORD" | grep -v "your-password" || echo "Warning: Potential hardcoded passwords found"
+        ! grep -r "api.*key.*=" backend/ --include="*.py" | grep -v "API_KEY" || echo "Warning: Potential hardcoded API keys found"
+    
+    - name: Verify .env.example exists
+      run: |
+        test -f backend/.env.example || exit 1
+        echo "✓ .env.example exists"
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, backend-lint, integration-check]
+    if: always()
+    
+    steps:
+    - name: Check build status
+      run: |
+        echo "Build Summary:"
+        echo "Backend Tests: ${{ needs.backend-tests.result }}"
+        echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
+        echo "Backend Lint: ${{ needs.backend-lint.result }}"
+        echo "Integration Check: ${{ needs.integration-check.result }}"

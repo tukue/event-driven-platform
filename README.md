@@ -1,4 +1,4 @@
-# Pizza Delivery  - Event-Driven Architecture
+# Event-Driven Architecture - delivery management systen 
 
 A real-time pizza delivery management system demonstrating event-driven architecture with React, FastAPI, and Redis Cloud.
 

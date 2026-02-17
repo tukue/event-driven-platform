@@ -243,9 +243,9 @@ MIT License - feel free to use for learning and portfolio purposes.
 ## 👤 Author
 
 **Your Name**
-- Portfolio: [your-portfolio.com](#)
-- LinkedIn: [your-linkedin](#)
-- GitHub: [@yourusername](#)
+- Portfolio: 
+- LinkedIn: https://www.linkedin.com/in/tukuegebremariam/
+- GitHub: https://github.com/tukue
 
 ## 🙏 Acknowledgments
 

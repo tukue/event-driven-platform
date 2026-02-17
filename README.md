@@ -1,4 +1,4 @@
-# Pizza Delivery Marketplace - Event-Driven Architecture
+# Pizza Delivery  - Event-Driven Architecture
 
 A real-time pizza delivery management system demonstrating event-driven architecture with React, FastAPI, and Redis Cloud.
 

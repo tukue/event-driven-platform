@@ -2,9 +2,6 @@
 
 A real-time pizza delivery management system demonstrating event-driven architecture with React, FastAPI, and Redis Cloud.
 
-## 🚀 Live Demo
-
-**[View Live Demo](#)** | **[Watch Video Demo](#)**
 
 ## ✨ Features
 

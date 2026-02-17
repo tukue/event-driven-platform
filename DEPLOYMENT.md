@@ -213,10 +213,10 @@ echo "python-3.11" > backend/runtime.txt
 
 **Environment Variables:**
 ```
-REDIS_HOST=redis-13869.crce175.eu-north-1-1.ec2.cloud.redislabs.com
-REDIS_PORT=13869
+REDIS_HOST=your-redis-host.cloud.redislabs.com
+REDIS_PORT=your-port
 REDIS_USERNAME=default
-REDIS_PASSWORD=QnWViHMDGLtL4iKN3CwW9XtaP8oll0TQ
+REDIS_PASSWORD=your-redis-password
 REDIS_DB=0
 CORS_ORIGINS=https://your-frontend-domain.vercel.app
 ```

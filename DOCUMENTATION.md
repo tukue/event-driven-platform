@@ -199,8 +199,8 @@ Value: JSON serialized PizzaOrder
 
 ```python
 # backend/.env
-REDIS_HOST=redis-13869.crce175.eu-north-1-1.ec2.cloud.redislabs.com
-REDIS_PORT=13869
+REDIS_HOST=your-redis-host.cloud.redislabs.com
+REDIS_PORT=your-port
 REDIS_USERNAME=default
 REDIS_PASSWORD=your-password
 REDIS_DB=0

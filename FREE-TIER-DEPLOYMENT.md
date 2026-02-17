@@ -79,9 +79,9 @@ services:
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: REDIS_HOST
-        value: redis-13869.crce175.eu-north-1-1.ec2.cloud.redislabs.com
+        value: your-redis-host.cloud.redislabs.com
       - key: REDIS_PORT
-        value: 13869
+        value: your-port
       - key: REDIS_USERNAME
         value: default
       - key: REDIS_PASSWORD
@@ -137,10 +137,10 @@ connection_params["max_connections"] = 10
 
 **Step 3: Add Environment Variables**
 ```
-REDIS_HOST=redis-13869.crce175.eu-north-1-1.ec2.cloud.redislabs.com
-REDIS_PORT=13869
+REDIS_HOST=your-redis-host.cloud.redislabs.com
+REDIS_PORT=your-port
 REDIS_USERNAME=default
-REDIS_PASSWORD=QnWViHMDGLtL4iKN3CwW9XtaP8oll0TQ
+REDIS_PASSWORD=your-redis-password
 REDIS_DB=0
 CORS_ORIGINS=https://your-app.vercel.app
 ```

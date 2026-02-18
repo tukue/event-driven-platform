@@ -1,4 +1,4 @@
-# Testing Guide - Pizza Delivery App
+# Testing Guide - Event Driven Platform
 
 ## Overview
 Comprehensive test suite covering unit tests, API tests, and end-to-end integration tests.

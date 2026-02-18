@@ -1,4 +1,4 @@
-from models import PizzaOrder, OrderStatus, OrderEvent
+from models import PizzaOrder, OrderStatus, OrderEvent, EventBatch, BatchResult
 from datetime import datetime
 import uuid
 import json
@@ -179,3 +179,103 @@ class OrderService:
         number = random.randint(1000, 9999)
         
         return f"{prefix}-{number}"
+    
+    def _generate_correlation_id(self) -> str:
+        """Generate a unique correlation ID for event batching"""
+        return f"batch-{uuid.uuid4()}"
+    
+    async def dispatch_events(self, events: list[dict], correlation_id: str = None) -> BatchResult:
+        """
+        Dispatch multiple events atomically with correlation ID tracking
+        
+        Args:
+            events: List of event dictionaries to publish
+            correlation_id: Optional correlation ID (generated if not provided)
+        
+        Returns:
+            BatchResult with success status and processing details
+        """
+        if correlation_id is None:
+            correlation_id = self._generate_correlation_id()
+        
+        batch = EventBatch(
+            correlation_id=correlation_id,
+            events=events,
+            created_at=datetime.utcnow()
+        )
+        
+        processed_count = 0
+        failed_count = 0
+        errors = []
+        
+        try:
+            # Publish all events in order
+            for event_data in events:
+                try:
+                    # Add correlation ID to each event
+                    event_data['correlation_id'] = correlation_id
+                    
+                    # Publish event
+                    await self.redis.publish(
+                        "pizza_orders",
+                        json.dumps(event_data, default=str)
+                    )
+                    processed_count += 1
+                    
+                except Exception as e:
+                    failed_count += 1
+                    errors.append(f"Failed to publish event: {str(e)}")
+                    
+                    # If any event fails, publish rollback event
+                    await self._publish_rollback_event(correlation_id, errors)
+                    
+                    return BatchResult(
+                        correlation_id=correlation_id,
+                        success=False,
+                        processed_count=processed_count,
+                        failed_count=failed_count,
+                        errors=errors,
+                        timestamp=datetime.utcnow()
+                    )
+            
+            # All events published successfully
+            return BatchResult(
+                correlation_id=correlation_id,
+                success=True,
+                processed_count=processed_count,
+                failed_count=0,
+                errors=[],
+                timestamp=datetime.utcnow()
+            )
+            
+        except Exception as e:
+            # Unexpected error during batch processing
+            errors.append(f"Batch processing error: {str(e)}")
+            await self._publish_rollback_event(correlation_id, errors)
+            
+            return BatchResult(
+                correlation_id=correlation_id,
+                success=False,
+                processed_count=processed_count,
+                failed_count=len(events) - processed_count,
+                errors=errors,
+                timestamp=datetime.utcnow()
+            )
+    
+    async def _publish_rollback_event(self, correlation_id: str, errors: list[str]):
+        """Publish a rollback event when batch processing fails"""
+        rollback_event = {
+            "event_type": "batch.rollback",
+            "correlation_id": correlation_id,
+            "errors": errors,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        try:
+            await self.redis.publish(
+                "pizza_orders",
+                json.dumps(rollback_event, default=str)
+            )
+            print(f"⚠️  Published rollback event for correlation_id: {correlation_id}")
+        except Exception as e:
+            print(f"❌ Failed to publish rollback event: {str(e)}")

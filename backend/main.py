@@ -4,7 +4,7 @@ from redis_client import redis_client
 from services.order_service import OrderService
 from services.delivery_service import DeliveryService
 from services.state_service import StateService, CachedStateService
-from models import PizzaOrder, OrderStatus
+from models import PizzaOrder, OrderStatus, EventBatch, BatchResult
 import asyncio
 
 app = FastAPI(title="Pizza Delivery Marketplace")
@@ -125,6 +125,39 @@ async def get_system_state(include_completed: bool = True, limit: int = None):
         return state.model_dump(mode='json')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get system state: {str(e)}")
+
+@app.post("/api/events/batch")
+async def dispatch_event_batch(batch: EventBatch):
+    """
+    Dispatch multiple events atomically with correlation ID tracking
+    
+    This endpoint allows publishing multiple related events in a single transaction.
+    All events succeed or all fail (atomic operation).
+    """
+    try:
+        result = await order_service.dispatch_events(
+            events=batch.events,
+            correlation_id=batch.correlation_id
+        )
+        
+        if not result.success:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "message": "Batch processing failed",
+                    "correlation_id": result.correlation_id,
+                    "processed_count": result.processed_count,
+                    "failed_count": result.failed_count,
+                    "errors": result.errors
+                }
+            )
+        
+        return result.model_dump(mode='json')
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process event batch: {str(e)}")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

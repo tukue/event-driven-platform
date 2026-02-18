@@ -2,6 +2,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from redis_client import redis_client
 from services.order_service import OrderService
+from services.delivery_service import DeliveryService
+from services.state_service import StateService, CachedStateService
 from models import PizzaOrder, OrderStatus
 import asyncio
 
@@ -16,12 +18,17 @@ app.add_middleware(
 )
 
 order_service = None
+delivery_service = None
+state_service = None
 
 @app.on_event("startup")
 async def startup():
     await redis_client.connect()
-    global order_service
+    global order_service, delivery_service, state_service
     order_service = OrderService(redis_client)
+    delivery_service = DeliveryService(redis_client)
+    base_state_service = StateService(redis_client)
+    state_service = CachedStateService(base_state_service, redis_client)
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -67,6 +74,57 @@ async def update_order_status(order_id: str, status: OrderStatus):
 @app.get("/api/orders")
 async def get_orders():
     return await order_service.get_all_orders()
+
+@app.get("/api/orders/{order_id}/delivery")
+async def get_delivery_info(order_id: str):
+    """Get delivery tracking information for an order by UUID"""
+    try:
+        delivery_info = await delivery_service.get_delivery_info(order_id)
+        return delivery_info
+    except ValueError as e:
+        error_msg = str(e)
+        if "not found" in error_msg:
+            raise HTTPException(status_code=404, detail=error_msg)
+        elif "not been dispatched" in error_msg:
+            raise HTTPException(status_code=400, detail=error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
+
+@app.get("/api/track/{tracking_id}")
+async def track_by_tracking_id(tracking_id: str):
+    """Track order using human-readable tracking ID (e.g., PIZZA-2024-001234)"""
+    try:
+        # Find order by tracking_id
+        order = await order_service.get_order_by_tracking_id(tracking_id)
+        if not order:
+            raise HTTPException(status_code=404, detail=f"Order with tracking ID {tracking_id} not found")
+        
+        # If dispatched, return full delivery info
+        if order["status"] in ["dispatched", "in_transit", "delivered"]:
+            delivery_info = await delivery_service.get_delivery_info(order["id"])
+            return delivery_info
+        else:
+            # Return basic order info if not yet dispatched
+            return {
+                "order_id": order["id"],
+                "tracking_id": order["tracking_id"],
+                "supplier_tracking_id": order["supplier_tracking_id"],
+                "status": order["status"],
+                "supplier_name": order["supplier_name"],
+                "pizza_name": order["pizza_name"],
+                "created_at": order["created_at"],
+                "message": "Order not yet dispatched. Check back soon!"
+            }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/api/state")
+async def get_system_state(include_completed: bool = True, limit: int = None):
+    """Get complete system state with caching"""
+    try:
+        state = await state_service.get_system_state(include_completed, limit)
+        return state.model_dump(mode='json')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get system state: {str(e)}")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

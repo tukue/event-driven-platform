@@ -1,7 +1,16 @@
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import AsyncClient
+import os
+
+# Set test environment variables before importing main
+os.environ['REDIS_HOST'] = 'test-host'
+os.environ['REDIS_PORT'] = '6379'
+os.environ['REDIS_USERNAME'] = 'test'
+os.environ['REDIS_PASSWORD'] = 'test'
+os.environ['REDIS_DB'] = '0'
+
 from main import app
 from services.order_service import OrderService
 
@@ -53,6 +62,9 @@ async def client(mocker):
     """Create test client with mocked Redis"""
     from httpx import ASGITransport
     from services.order_service import OrderService
+    from services.delivery_service import DeliveryService
+    from services.state_service import StateService, CachedStateService
+    import main
     
     # Mock the redis_client used by the app
     mock_redis = MagicMock()
@@ -79,9 +91,11 @@ async def client(mocker):
     # Patch the redis_client in main module
     mocker.patch('main.redis_client', mock_redis)
     
-    # Create order service with mocked redis and patch it in main
-    mock_order_service = OrderService(mock_redis)
-    mocker.patch('main.order_service', mock_order_service)
+    # Create services with mocked redis and set them directly on main module
+    main.order_service = OrderService(mock_redis)
+    main.delivery_service = DeliveryService(mock_redis)
+    base_state_service = StateService(mock_redis)
+    main.state_service = CachedStateService(base_state_service, mock_redis)
     
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac

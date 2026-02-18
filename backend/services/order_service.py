@@ -2,6 +2,8 @@ from models import PizzaOrder, OrderStatus, OrderEvent
 from datetime import datetime
 import uuid
 import json
+import random
+import string
 
 class OrderService:
     def __init__(self, redis_client):
@@ -14,6 +16,10 @@ class OrderService:
         order.updated_at = order.created_at
         order.status = OrderStatus.PENDING_SUPPLIER
         
+        # Generate human-readable tracking IDs
+        order.tracking_id = self._generate_tracking_id()
+        order.supplier_tracking_id = self._generate_supplier_tracking_id(order.supplier_name)
+        
         await self._save_order(order)
         
         event = OrderEvent(
@@ -23,6 +29,8 @@ class OrderService:
         )
         await self._publish_event(event)
         print(f"✅ Order created and published: {order.id}")
+        print(f"   📦 Tracking ID: {order.tracking_id}")
+        print(f"   🏪 Supplier Tracking ID: {order.supplier_tracking_id}")
         return event
     
     async def supplier_respond(self, order_id: str, accept: bool, notes: str = None, estimated_time: int = None) -> OrderEvent:
@@ -112,6 +120,14 @@ class OrderService:
                 orders.append(json.loads(order_data))
         return sorted(orders, key=lambda x: x['created_at'], reverse=True)
     
+    async def get_order_by_tracking_id(self, tracking_id: str):
+        """Find an order by its tracking ID"""
+        all_orders = await self.get_all_orders()
+        for order in all_orders:
+            if order.get('tracking_id') == tracking_id or order.get('supplier_tracking_id') == tracking_id:
+                return order
+        return None
+    
     async def _save_order(self, order: PizzaOrder):
         order_dict = order.model_dump(mode='json')
         key = f"order:{order.id}"
@@ -139,3 +155,27 @@ class OrderService:
             "pizza_orders",
             json.dumps(event.model_dump(mode='json'), default=str)
         )
+    
+    def _generate_tracking_id(self) -> str:
+        """
+        Generate a human-readable tracking ID
+        Format: PIZZA-YYYY-NNNNNN (e.g., PIZZA-2024-001234)
+        """
+        year = datetime.utcnow().year
+        # Generate 6-digit random number
+        number = random.randint(100000, 999999)
+        return f"PIZZA-{year}-{number}"
+    
+    def _generate_supplier_tracking_id(self, supplier_name: str) -> str:
+        """
+        Generate a supplier-specific tracking ID
+        Format: SUPPLIER_PREFIX-NNNN (e.g., PP-1234 for Pizza Palace)
+        """
+        # Create prefix from supplier name (first letters of each word)
+        words = supplier_name.upper().split()
+        prefix = ''.join(word[0] for word in words[:3])  # Max 3 letters
+        
+        # Generate 4-digit number
+        number = random.randint(1000, 9999)
+        
+        return f"{prefix}-{number}"

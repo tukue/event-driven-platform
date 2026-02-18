@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
+from pathlib import Path
 
 class Settings(BaseSettings):
     redis_host: str
@@ -9,6 +11,8 @@ class Settings(BaseSettings):
     redis_db: int = 0
     
     class Config:
-        env_file = ".env"
+        # Look for .env in backend directory
+        env_file = Path(__file__).parent / ".env"
+        env_file_encoding = 'utf-8'
 
 settings = Settings()

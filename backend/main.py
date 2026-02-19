@@ -13,7 +13,7 @@ app = FastAPI(title="Pizza Delivery Marketplace")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,22 +26,48 @@ metrics_service = None
 
 @app.on_event("startup")
 async def startup():
-    await redis_client.connect()
-    global order_service, delivery_service, state_service, metrics_service
-    order_service = OrderService(redis_client)
-    delivery_service = DeliveryService(redis_client)
-    base_state_service = StateService(redis_client)
-    state_service = CachedStateService(base_state_service, redis_client)
-    metrics_service = MetricsService(redis_client)
+    print("🔵 Starting up...")
+    try:
+        print("🔵 Connecting to Redis...")
+        # Comment out Redis for testing
+        # await asyncio.wait_for(redis_client.connect(), timeout=10.0)
+        print("⚠️  Redis connection SKIPPED for testing")
+        
+        global order_service, delivery_service, state_service, metrics_service
+        # Comment out services that need Redis
+        # order_service = OrderService(redis_client)
+        # delivery_service = DeliveryService(redis_client)
+        # base_state_service = StateService(redis_client)
+        # state_service = CachedStateService(base_state_service, redis_client)
+        # metrics_service = MetricsService(redis_client)
+        print("⚠️  Services initialization SKIPPED for testing")
+        print("✅ Startup complete (test mode)")
+    except asyncio.TimeoutError:
+        print("❌ Redis connection timed out!")
+        raise
+    except Exception as e:
+        print(f"❌ Startup error: {e}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown():
     await redis_client.disconnect()
 
+@app.get("/health")
+async def health():
+    """Simple health check that doesn't use Redis"""
+    return {"status": "ok", "message": "Backend is running"}
+
 @app.post("/api/orders")
 async def create_order(order: PizzaOrder):
-    event = await order_service.create_order(order)
-    return event.model_dump(mode='json')
+    print(f"🔵 Received order creation request: {order.pizza_name}")
+    try:
+        event = await order_service.create_order(order)
+        print(f"🟢 Order created successfully: {event.order.id}")
+        return event.model_dump(mode='json')
+    except Exception as e:
+        print(f"🔴 Error creating order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/orders/{order_id}/supplier-respond")
 async def supplier_respond(order_id: str, accept: bool, notes: str = None, estimated_time: int = None):

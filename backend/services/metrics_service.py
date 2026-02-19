@@ -114,7 +114,13 @@ class MetricsService:
     
     async def _get_all_orders(self) -> List[Dict]:
         """Fetch all orders from Redis"""
-        keys = await self.redis.client.keys("order:*")
+        keys = []
+        cursor = 0
+        while True:
+            cursor, partial_keys = await self.redis.client.scan(cursor, match="order:*", count=100)
+            keys.extend(partial_keys)
+            if cursor == 0:
+                break
         orders = []
         for key in keys:
             order_data = await self.redis.client.get(key)

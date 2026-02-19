@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { API_BASE_URL } from '../config/api';
 import useWebSocket from '../hooks/useWebSocket';
@@ -183,35 +183,37 @@ const SystemDashboard = () => {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [notification, setNotification] = useState(null);
+  
+  // Use ref to track notification timeout and prevent memory leaks
+  const notificationTimeoutRef = useRef(null);
 
-  // Show notification helper
-  const showNotification = (message, type = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  // WebSocket for real-time updates
-  const { isConnected } = useWebSocket((event) => {
-    // Refetch system state on any order event
-    if (event.event_type?.startsWith('order.')) {
-      fetchSystemState();
-      
-      // Show notification for important events
-      const eventMessages = {
-        'order.created': '📝 New order created',
-        'order.dispatched': '📦 Order dispatched',
-        'order.in_transit': '🚗 Order in transit',
-        'order.delivered': '🎉 Order delivered',
-      };
-      
-      const message = eventMessages[event.event_type];
-      if (message) {
-        showNotification(message, 'success');
-      }
+  // Show notification helper with cleanup
+  const showNotification = useCallback((message, type = 'info') => {
+    // Clear any existing timeout to prevent memory leaks
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
     }
-  });
+    
+    setNotification({ message, type });
+    
+    // Set new timeout and store reference
+    notificationTimeoutRef.current = setTimeout(() => {
+      setNotification(null);
+      notificationTimeoutRef.current = null;
+    }, 3000);
+  }, []);
 
-  const fetchSystemState = async () => {
+  // Cleanup notification timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Wrap fetchSystemState with useCallback to prevent stale closures
+  const fetchSystemState = useCallback(async () => {
     try {
       setError(null);
       
@@ -229,14 +231,37 @@ const SystemDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // WebSocket callback wrapped with useCallback to prevent stale closures
+  const handleWebSocketMessage = useCallback((event) => {
+    // Refetch system state on any order event
+    if (event.event_type?.startsWith('order.')) {
+      fetchSystemState();
+      
+      // Show notification for important events
+      const eventMessages = {
+        'order.created': '📝 New order created',
+        'order.dispatched': '📦 Order dispatched',
+        'order.in_transit': '🚗 Order in transit',
+        'order.delivered': '🎉 Order delivered',
+      };
+      
+      const message = eventMessages[event.event_type];
+      if (message) {
+        showNotification(message, 'success');
+      }
+    }
+  }, [fetchSystemState, showNotification]);
+
+  const { isConnected } = useWebSocket(handleWebSocketMessage);
 
   // Initial fetch
   useEffect(() => {
     fetchSystemState();
-  }, []);
+  }, [fetchSystemState]);
 
-  // Auto-refresh every 5 seconds
+  // Auto-refresh every 5 seconds with proper dependency
   useEffect(() => {
     const interval = setInterval(() => {
       if (!loading) {
@@ -245,7 +270,7 @@ const SystemDashboard = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, fetchSystemState]);
 
   if (loading && !systemState) {
     return <LoadingState />;

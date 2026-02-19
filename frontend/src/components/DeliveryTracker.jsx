@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 import useWebSocket from '../hooks/useWebSocket';
@@ -185,22 +185,10 @@ const DeliveryTracker = ({ orderId, onClose }) => {
     deliveryInfo?.current_status === 'delivered'
   );
 
-  // WebSocket integration for real-time updates
-  const { isConnected } = useWebSocket((event) => {
-    // Only update if this event is for the current order
-    if (event.order?.id === orderId) {
-      // Refetch delivery info when order status changes
-      if (
-        event.event_type === 'order.dispatched' ||
-        event.event_type === 'order.in_transit' ||
-        event.event_type === 'order.delivered'
-      ) {
-        fetchDeliveryInfo();
-      }
-    }
-  });
-
-  const fetchDeliveryInfo = async () => {
+  // Wrap fetchDeliveryInfo with useCallback to prevent stale closures
+  const fetchDeliveryInfo = useCallback(async () => {
+    if (!orderId) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -224,12 +212,30 @@ const DeliveryTracker = ({ orderId, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
 
+  // WebSocket integration for real-time updates with useCallback to prevent stale closures
+  const handleWebSocketMessage = useCallback((event) => {
+    // Only update if this event is for the current order
+    if (event.order?.id === orderId) {
+      // Refetch delivery info when order status changes
+      if (
+        event.event_type === 'order.dispatched' ||
+        event.event_type === 'order.in_transit' ||
+        event.event_type === 'order.delivered'
+      ) {
+        fetchDeliveryInfo();
+      }
+    }
+  }, [orderId, fetchDeliveryInfo]);
+
+  const { isConnected } = useWebSocket(handleWebSocketMessage);
+
+  // Initial fetch
   useEffect(() => {
     if (!orderId) return;
     fetchDeliveryInfo();
-  }, [orderId]);
+  }, [orderId, fetchDeliveryInfo]);
 
   if (!orderId) return null;
 

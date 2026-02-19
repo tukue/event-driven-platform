@@ -11,6 +11,7 @@ A real-time pizza delivery management system demonstrating event-driven architec
 - **Complete Order Lifecycle** - From creation to delivery with state management
 - **Automatic Pricing** - Configurable markup calculation
 - **Persistent Storage** - Redis Cloud for data and event streaming
+- **📊 Grafana Visualization** - Real-time metrics and analytics dashboards
 
 ## 🏗️ Architecture
 
@@ -107,6 +108,39 @@ python inspect_redis.py
 4. Mark as Preparing → Ready
 5. Dispatch with Driver
 6. Mark In Transit → Delivered
+
+## 📊 Grafana Visualization
+
+### Quick Setup
+
+1. **Generate Test Data**
+```bash
+cd backend
+python generate_test_data.py
+```
+
+2. **Test Metrics Endpoints**
+```bash
+python test_grafana_metrics.py
+```
+
+3. **Configure Grafana**
+- See [GRAFANA_SETUP.md](GRAFANA_SETUP.md) for detailed instructions
+- Import dashboard from `grafana/dashboard-orders-delivered.json`
+
+### Available Metrics
+
+- **Prometheus format**: http://localhost:8000/metrics
+- **JSON format**: http://localhost:8000/api/metrics
+
+### Dashboard Features
+
+- Real-time delivery statistics
+- Delivery rate gauge
+- Time-series trends (today, 7 days, 30 days)
+- Supplier performance breakdown
+- Driver performance analytics
+- Hourly delivery distribution
 
 ## 📁 Project Structure
 
@@ -218,6 +252,9 @@ VITE_API_URL=https://your-backend-url
 - [Complete Documentation](DOCUMENTATION.md)
 - [Deployment Guide](DEPLOYMENT.md)
 - [Free Tier Deployment](FREE-TIER-DEPLOYMENT.md)
+- [Grafana Setup Guide](GRAFANA_SETUP.md)
+- [Grafana Testing Guide](GRAFANA_TESTING_GUIDE.md)
+- [Grafana Quick Reference](GRAFANA_QUICK_REFERENCE.md)
 - [API Documentation](http://localhost:8000/docs)
 
 ## 🚀 Deployment

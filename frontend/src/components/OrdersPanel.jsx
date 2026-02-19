@@ -28,7 +28,7 @@ const statusEmojis = {
   cancelled: '🚫'
 }
 
-function OrdersPanel({ orders }) {
+function OrdersPanel({ orders, onTrackDelivery }) {
   const updateStatus = async (orderId, status) => {
     await fetch(`http://localhost:8000/api/orders/${orderId}/status?status=${status}`, {
       method: 'POST'
@@ -85,6 +85,27 @@ function OrdersPanel({ orders }) {
                   }}>
                     {statusEmojis[event.order.status]} {event.order.status}
                   </div>
+                  
+                  {/* Track Delivery button for dispatched, in_transit, and delivered orders */}
+                  {['dispatched', 'in_transit', 'delivered'].includes(event.order.status) && (
+                    <button 
+                      onClick={() => onTrackDelivery(event.order.id)}
+                      style={{ 
+                        padding: '8px 15px', 
+                        fontSize: '13px',
+                        backgroundColor: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        marginBottom: '5px',
+                        width: '100%'
+                      }}
+                    >
+                      🚚 Track Delivery
+                    </button>
+                  )}
+                  
                   {!['delivered', 'cancelled', 'supplier_rejected', 'created', 'pending_supplier', 'supplier_accepted'].includes(event.order.status) && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       {event.order.status === 'customer_accepted' && (

@@ -1,8 +1,8 @@
-# Free Tier Deployment - Pizza Delivery Marketplace
+# Free Tier Deployment - Event Driven Platform
 ## Portfolio Project - $0/Month Deployment Strategy
 
 ## Overview
-Deploy your event-driven pizza delivery app completely free for portfolio/consulting demonstrations.
+Deploy your event-driven platform completely free for portfolio/consulting demonstrations.
 
 ---
 
@@ -297,7 +297,7 @@ setInterval(() => {
 
 ### 2. Add to Portfolio Site
 ```markdown
-## Pizza Delivery Marketplace
+## Event Driven Platform
 Event-driven real-time order management system
 
 **Tech Stack:** React, FastAPI, Redis, WebSocket
@@ -397,7 +397,7 @@ sentry_sdk.init(dsn="your-dsn")
 ## 📝 Sample Portfolio Description
 
 ```markdown
-# Event-Driven Pizza Delivery Marketplace
+# Event-Driven Platform
 
 A real-time order management system demonstrating event-driven architecture 
 and WebSocket communication.

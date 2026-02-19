@@ -4,9 +4,12 @@ import SupplierPanel from './components/SupplierPanel'
 import CustomerPanel from './components/CustomerPanel'
 import DispatchPanel from './components/DispatchPanel'
 import OrdersPanel from './components/OrdersPanel'
+import DeliveryTracker from './components/DeliveryTracker'
 
 function App() {
   const [orders, setOrders] = useState([])
+  const [trackingOrderId, setTrackingOrderId] = useState(null)
+  
   const { isConnected } = useWebSocket((event) => {
     setOrders(prev => {
       const existing = prev.findIndex(o => o.order.id === event.order.id)
@@ -56,7 +59,14 @@ function App() {
         <DispatchPanel orders={orders} />
       </div>
 
-      <OrdersPanel orders={orders} />
+      <OrdersPanel orders={orders} onTrackDelivery={setTrackingOrderId} />
+
+      {trackingOrderId && (
+        <DeliveryTracker
+          orderId={trackingOrderId}
+          onClose={() => setTrackingOrderId(null)}
+        />
+      )}
     </div>
   )
 }

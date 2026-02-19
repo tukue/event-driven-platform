@@ -1,9 +1,11 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from redis_client import redis_client
 from services.order_service import OrderService
 from services.delivery_service import DeliveryService
 from services.state_service import StateService, CachedStateService
+from services.metrics_service import MetricsService
 from models import PizzaOrder, OrderStatus, EventBatch, BatchResult
 import asyncio
 
@@ -20,15 +22,17 @@ app.add_middleware(
 order_service = None
 delivery_service = None
 state_service = None
+metrics_service = None
 
 @app.on_event("startup")
 async def startup():
     await redis_client.connect()
-    global order_service, delivery_service, state_service
+    global order_service, delivery_service, state_service, metrics_service
     order_service = OrderService(redis_client)
     delivery_service = DeliveryService(redis_client)
     base_state_service = StateService(redis_client)
     state_service = CachedStateService(base_state_service, redis_client)
+    metrics_service = MetricsService(redis_client)
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -158,6 +162,28 @@ async def dispatch_event_batch(batch: EventBatch):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process event batch: {str(e)}")
+
+@app.get("/api/metrics")
+async def get_metrics():
+    """Get delivery metrics in JSON format for Grafana JSON datasource"""
+    if metrics_service is None:
+        raise HTTPException(status_code=503, detail="Metrics service not initialized")
+    try:
+        metrics = await metrics_service.get_delivery_metrics()
+        return metrics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def get_prometheus_metrics():
+    """Get metrics in Prometheus format for Grafana Prometheus datasource"""
+    if metrics_service is None:
+        raise HTTPException(status_code=503, detail="Metrics service not initialized")
+    try:
+        metrics = await metrics_service.get_prometheus_metrics()
+        return metrics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get Prometheus metrics: {str(e)}")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

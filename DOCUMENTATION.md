@@ -1,8 +1,8 @@
-# Pizza Delivery Marketplace - Technical Documentation
+# Event Driven Platform - Technical Documentation
 
 ## Overview
 
-An event-driven pizza delivery platform built with React, FastAPI, and Redis Cloud. The system connects suppliers, customers, and dispatch services through real-time WebSocket communication and Redis Pub/Sub messaging.
+An event-driven platform built with React, FastAPI, and Redis Cloud. The system connects suppliers, customers, and dispatch services through real-time WebSocket communication and Redis Pub/Sub messaging.
 
 ## Architecture
 

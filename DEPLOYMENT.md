@@ -1,7 +1,7 @@
-# Event-Driven Pizza Delivery App - Deployment Plan
+# Event-Driven Platform - Deployment Plan
 
 ## Overview
-Comprehensive deployment strategy for the event-driven pizza delivery marketplace with React frontend, FastAPI backend, and Redis Cloud.
+Comprehensive deployment strategy for the event-driven platform with React frontend, FastAPI backend, and Redis Cloud.
 
 ## Deployment Architecture Options
 

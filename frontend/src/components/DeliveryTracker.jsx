@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import useWebSocket from '../hooks/useWebSocket';
 import './DeliveryTracker.css';
 
 // Subcomponents
@@ -184,35 +185,49 @@ const DeliveryTracker = ({ orderId, onClose }) => {
     deliveryInfo?.current_status === 'delivered'
   );
 
+  // WebSocket integration for real-time updates
+  const { isConnected } = useWebSocket((event) => {
+    // Only update if this event is for the current order
+    if (event.order?.id === orderId) {
+      // Refetch delivery info when order status changes
+      if (
+        event.event_type === 'order.dispatched' ||
+        event.event_type === 'order.in_transit' ||
+        event.event_type === 'order.delivered'
+      ) {
+        fetchDeliveryInfo();
+      }
+    }
+  });
+
+  const fetchDeliveryInfo = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.delivery(orderId)}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Order not found');
+        } else if (response.status === 400) {
+          const data = await response.json();
+          throw new Error(data.detail || 'Order not yet dispatched');
+        }
+        throw new Error('Failed to fetch delivery information');
+      }
+
+      const data = await response.json();
+      setDeliveryInfo(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!orderId) return;
-
-    const fetchDeliveryInfo = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.delivery(orderId)}`);
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Order not found');
-          } else if (response.status === 400) {
-            const data = await response.json();
-            throw new Error(data.detail || 'Order not yet dispatched');
-          }
-          throw new Error('Failed to fetch delivery information');
-        }
-
-        const data = await response.json();
-        setDeliveryInfo(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDeliveryInfo();
   }, [orderId]);
 
@@ -223,13 +238,18 @@ const DeliveryTracker = ({ orderId, onClose }) => {
       <div className="delivery-tracker" onClick={(e) => e.stopPropagation()}>
         <div className="delivery-tracker__header">
           <h2 className="delivery-tracker__title">Delivery Tracker</h2>
-          <button
-            onClick={onClose}
-            className="delivery-tracker__close"
-            aria-label="Close"
-          >
-            ×
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', color: isConnected ? '#4caf50' : '#999' }}>
+              {isConnected ? '🟢 Live' : '⚪ Offline'}
+            </span>
+            <button
+              onClick={onClose}
+              className="delivery-tracker__close"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {loading && <LoadingState />}

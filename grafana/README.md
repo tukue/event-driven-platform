@@ -1,6 +1,6 @@
-# Grafana Dashboard for Pizza Delivery Analytics
+# Grafana Dashboard for Event Driven Platform Analytics
 
-This directory contains the Grafana dashboard configuration for visualizing pizza delivery metrics.
+This directory contains the Grafana dashboard configuration for visualizing event-driven platform metrics.
 
 ## Files
 

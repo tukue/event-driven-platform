@@ -2,7 +2,7 @@
 
 ## 🎉 Implementation Status: COMPLETE
 
-All components for Grafana visualization of pizza delivery orders have been successfully implemented and tested.
+All components for Grafana visualization of event-driven platform orders have been successfully implemented and tested.
 
 ## 📦 What You Have
 

@@ -1,6 +1,6 @@
 # Grafana Testing Guide
 
-Complete guide to test the Grafana visualization setup for pizza delivery analytics.
+Complete guide to test the Grafana visualization setup for event-driven platform analytics.
 
 ## Prerequisites
 

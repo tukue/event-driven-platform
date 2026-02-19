@@ -167,6 +167,9 @@ async def dispatch_event_batch(batch: EventBatch):
 async def get_metrics():
     """Get delivery metrics in JSON format for Grafana JSON datasource"""
     try:
+    if metrics_service is None:
+        raise HTTPException(status_code=503, detail="Metrics service not initialized")
+    try:
         metrics = await metrics_service.get_delivery_metrics()
         return metrics
     except Exception as e:

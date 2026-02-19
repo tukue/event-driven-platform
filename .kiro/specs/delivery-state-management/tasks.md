@@ -121,41 +121,41 @@
 
 ## Phase 5: Frontend - System Dashboard
 
-- [ ] 20. Create SystemDashboard Component
-  - [ ] 20.1 Create component file and structure
-  - [ ] 20.2 Fetch state from `/api/state` endpoint
-  - [ ] 20.3 Add auto-refresh (5 seconds)
-  - [ ] 20.4 Add loading and error states
+- [x] 20. Create SystemDashboard Component
+  - [x] 20.1 Create component file and structure
+  - [x] 20.2 Fetch state from `/api/state` endpoint
+  - [x] 20.3 Add auto-refresh (5 seconds)
+  - [x] 20.4 Add loading and error states
 
-- [ ] 21. Build Statistics Cards
-  - [ ] 21.1 Create StatCard component
-  - [ ] 21.2 Display total orders, active deliveries, completed
-  - [ ] 21.3 Add icons for each metric
-  - [ ] 21.4 Style cards with colors
+- [x] 21. Build Statistics Cards
+  - [x] 21.1 Create StatCard component
+  - [x] 21.2 Display total orders, active deliveries, completed
+  - [x] 21.3 Add icons for each metric
+  - [x] 21.4 Style cards with colors
 
-- [ ] 22. Build Orders by Status View
-  - [ ] 22.1 Create collapsible sections for each status
-  - [ ] 22.2 Display order count per status
-  - [ ] 22.3 Show order details on expand
-  - [ ] 22.4 Add filtering options
+- [x] 22. Build Orders by Status View
+  - [x] 22.1 Create collapsible sections for each status
+  - [x] 22.2 Display order count per status
+  - [x] 22.3 Show order details on expand
+  - [x] 22.4 Add filtering options
 
-- [ ] 23. Build Active Drivers List
-  - [ ] 23.1 Create driver list component
-  - [ ] 23.2 Display driver name and assigned order
-  - [ ] 23.3 Show current status
-  - [ ] 23.4 Add driver status indicators
+- [x] 23. Build Active Drivers List
+  - [x] 23.1 Create driver list component
+  - [x] 23.2 Display driver name and assigned order
+  - [x] 23.3 Show current status
+  - [x] 23.4 Add driver status indicators
 
-- [ ] 24. Add Real-Time Updates
-  - [ ] 24.1 Subscribe to system events via WebSocket
-  - [ ] 24.2 Update statistics on new events
-  - [ ] 24.3 Update order lists dynamically
-  - [ ] 24.4 Add visual notifications for changes
+- [x] 24. Add Real-Time Updates
+  - [x] 24.1 Subscribe to system events via WebSocket
+  - [x] 24.2 Update statistics on new events
+  - [x] 24.3 Update order lists dynamically
+  - [x] 24.4 Add visual notifications for changes
 
-- [ ] 25. Add to Main App
-  - [ ] 25.1 Import SystemDashboard in App.jsx
-  - [ ] 25.2 Add dashboard route/tab
-  - [ ] 25.3 Add navigation to dashboard
-  - [ ] 25.4 Style dashboard layout
+- [x] 25. Add to Main App
+  - [x] 25.1 Import SystemDashboard in App.jsx
+  - [x] 25.2 Add dashboard route/tab
+  - [x] 25.3 Add navigation to dashboard
+  - [x] 25.4 Style dashboard layout
 
 ## Phase 6: Testing & Documentation
 

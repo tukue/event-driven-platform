@@ -574,18 +574,47 @@ event-driven-platform/
 
 **Backend** (`backend/.env`)
 ```env
+# Redis Configuration
 REDIS_HOST=your-redis-host
 REDIS_PORT=13869
 REDIS_USERNAME=default
 REDIS_PASSWORD=your-password
 REDIS_DB=0
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:3000
+CORS_ALLOW_CREDENTIALS=true
+CORS_ALLOW_METHODS=*
+CORS_ALLOW_HEADERS=*
 ```
+
+**Production CORS Configuration**:
+```env
+# Use HTTPS and specific domains in production
+CORS_ORIGINS=https://myapp.com,https://www.myapp.com
+CORS_ALLOW_CREDENTIALS=true
+CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS
+CORS_ALLOW_HEADERS=Content-Type,Authorization,X-Requested-With
+```
+
+See [CORS Configuration Guide](backend/CORS_CONFIGURATION.md) for detailed setup.
 
 ### CORS Configuration
 
 Backend allows connections from:
-- http://localhost:5173 (Vite dev server)
-- http://localhost:3000 (Alternative port)
+- Configurable via environment variables
+- Default: http://localhost:5173, http://localhost:5174, http://localhost:3000
+- Production: Set CORS_ORIGINS to your domain(s)
+
+**Configuration**:
+```env
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:3000
+CORS_ALLOW_CREDENTIALS=true
+CORS_ALLOW_METHODS=*
+CORS_ALLOW_HEADERS=*
+```
+
+See [CORS Configuration Guide](backend/CORS_CONFIGURATION.md) for details.
 
 ## Security Considerations
 

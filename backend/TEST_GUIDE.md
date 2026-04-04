@@ -95,6 +95,14 @@ backend/tests/
 └── test_integration.py      # End-to-end tests
 ```
 
+## Redis Streams Tests
+
+```bash
+cd backend
+python -m pytest tests/test_streams_integration.py -v
+python test_streams.py
+```
+
 ## Key Test Scenarios
 
 ### 1. Complete Order Lifecycle
@@ -255,4 +263,3 @@ pip install locust
 ---
 
 **Test Coverage Goal:** 80%+
-**Current Status:** ✅ All critical paths covered

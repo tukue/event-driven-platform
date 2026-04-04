@@ -50,10 +50,10 @@ class StreamInspector:
     async def read_recent_events(self, stream_name: str, count: int = 10):
         """Read the most recent events from a stream"""
         try:
-            entries = await self.redis.read_stream(stream_name, "-", "+", count=count)
+            entries = await self.redis.client.xrevrange(stream_name, max="+", min="-", count=count)
             print(f"\n=== Recent Events from {stream_name} (last {count}) ===")
 
-            for entry_id, data in reversed(entries):  # Show newest first
+            for entry_id, data in entries:
                 timestamp = data.get('timestamp', 'N/A')
                 event_type = data.get('event_type', 'N/A')
                 correlation_id = data.get('correlation_id', 'N/A')

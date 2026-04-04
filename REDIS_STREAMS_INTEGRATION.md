@@ -82,6 +82,14 @@ cd backend
 python main.py
 ```
 
+## Testing the Integration
+
+```bash
+cd backend
+python -m pytest tests/test_streams_integration.py -v
+python test_streams.py
+```
+
 ### Inspecting Streams
 
 Use the stream inspector utility:

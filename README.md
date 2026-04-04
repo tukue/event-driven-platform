@@ -90,6 +90,14 @@ npm run dev
 
 ## 🧪 Testing
 
+### Redis Streams Tests
+
+```bash
+cd backend
+python -m pytest tests/test_streams_integration.py -v
+python test_streams.py
+```
+
 ### Test Redis Connection
 ```bash
 cd backend
@@ -199,8 +207,8 @@ event-driven-platform/
 
 **Backend (.env):**
 ```env
-REDIS_HOST=your-redis-host
-REDIS_PORT=6379
+REDIS_HOST=redis-17146.crce175.eu-north-1-1.ec2.cloud.redislabs.com
+REDIS_PORT=17146
 REDIS_USERNAME=default
 REDIS_PASSWORD=your-password
 REDIS_DB=0

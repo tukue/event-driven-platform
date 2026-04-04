@@ -6,6 +6,7 @@ Demonstrates publishing events to streams and consuming them.
 
 import asyncio
 import json
+import uuid
 from datetime import datetime
 from redis_client import redis_client
 from services.stream_consumer import StreamConsumer
@@ -13,13 +14,13 @@ from models import PizzaOrder, OrderEvent, OrderStatus
 
 async def test_stream_operations():
     """Test basic stream operations"""
-    print("🔄 Testing Redis Streams integration...")
+    print("Testing Redis Streams integration...")
 
     await redis_client.connect()
 
     try:
         # Test 1: Add events to stream
-        print("\n📝 Test 1: Publishing events to stream")
+        print("\nTest 1: Publishing events to stream")
 
         # Create a sample order
         order = PizzaOrder(
@@ -28,6 +29,7 @@ async def test_stream_operations():
             supplier_price=15.99,
             markup_percentage=30.0
         )
+        order.id = order.id or str(uuid.uuid4())
 
         # Create events
         events = [
@@ -58,23 +60,23 @@ async def test_stream_operations():
         for event in events:
             stream_id = await redis_client.add_to_stream("test_stream", event)
             stream_ids.append(stream_id)
-            print(f"✅ Added event to stream: {stream_id}")
+            print(f"Added event to stream: {stream_id}")
 
         # Test 2: Read events from stream
-        print("\n📖 Test 2: Reading events from stream")
+        print("\nTest 2: Reading events from stream")
         entries = await redis_client.read_stream("test_stream", "0", count=10)
 
         for entry_id, data in entries:
-            print(f"📄 Event ID: {entry_id}")
+            print(f"Event ID: {entry_id}")
             print(f"   Type: {data.get('event_type')}")
             print(f"   Order ID: {data.get('order_id')}")
 
         # Test 3: Consumer group operations
-        print("\n👥 Test 3: Consumer group operations")
+        print("\nTest 3: Consumer group operations")
 
         # Create consumer group
         await redis_client.create_consumer_group("test_stream", "test_group")
-        print("✅ Created consumer group 'test_group'")
+        print("Created consumer group 'test_group'")
 
         # Read from consumer group
         messages = await redis_client.read_stream_group(
@@ -86,23 +88,23 @@ async def test_stream_operations():
             for stream_messages in messages:
                 stream_name, entries = stream_messages
                 for message_id, message_data in entries:
-                    print(f"📨 Consumed message: {message_id}")
+                    print(f"Consumed message: {message_id}")
                     print(f"   Event: {message_data.get('event_type')}")
                     message_ids.append(message_id)
 
             # Acknowledge messages
             if message_ids:
                 await redis_client.acknowledge_message("test_stream", "test_group", message_ids)
-                print("✅ Acknowledged messages")
+                print("Acknowledged messages")
 
         # Test 4: Stream consumer
-        print("\n🔄 Test 4: Stream consumer")
+        print("\nTest 4: Stream consumer")
 
         consumer = StreamConsumer(stream_name="test_stream", group_name="test_group")
 
         # Register a test handler
         async def test_handler(event_data):
-            print(f"🎯 Handler called for event: {event_data.get('event_type')}")
+            print(f"Handler called for event: {event_data.get('event_type')}")
 
         consumer.register_handler("order.created", test_handler)
         consumer.register_handler("order.supplier_accepted", test_handler)
@@ -120,7 +122,7 @@ async def test_stream_operations():
         }
 
         await redis_client.add_to_stream("test_stream", test_event)
-        print("✅ Added test event for consumer")
+        print("Added test event for consumer")
 
         # Start consumer briefly
         consumer_task = asyncio.create_task(consumer.start_consuming())
@@ -137,20 +139,20 @@ async def test_stream_operations():
         except asyncio.CancelledError:
             pass
 
-        print("✅ Consumer test completed")
+        print("Consumer test completed")
 
         # Test 5: Stream info
-        print("\n📊 Test 5: Stream information")
+        print("\nTest 5: Stream information")
         info = await redis_client.get_stream_info("test_stream")
         if info:
             print(f"Stream length: {info.get('length', 'N/A')}")
             print(f"First entry: {info.get('first-entry', ['N/A'])[0] if info.get('first-entry') else 'N/A'}")
             print(f"Last entry: {info.get('last-entry', ['N/A'])[0] if info.get('last-entry') else 'N/A'}")
 
-        print("\n🎉 All Redis Streams tests completed successfully!")
+        print("\nAll Redis Streams tests completed successfully!")
 
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        print(f"Test failed: {e}")
         import traceback
         traceback.print_exc()
 

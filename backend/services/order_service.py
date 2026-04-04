@@ -151,10 +151,27 @@ class OrderService:
         return PizzaOrder(**json.loads(order_data))
     
     async def _publish_event(self, event: OrderEvent):
+        event_data = event.model_dump(mode='json')
+        
+        # Publish to Redis pub/sub for backward compatibility
         await self.redis.publish(
             "pizza_orders",
-            json.dumps(event.model_dump(mode='json'), default=str)
+            json.dumps(event_data, default=str)
         )
+        
+        # Add to Redis Stream for persistence and advanced features
+        stream_data = {
+            "event_type": event.event_type,
+            "order_id": event.order.id,
+            "timestamp": event.timestamp.isoformat(),
+            "data": json.dumps(event_data, default=str)
+        }
+        
+        if event.correlation_id:
+            stream_data["correlation_id"] = event.correlation_id
+        
+        await self.redis.add_to_stream("pizza_orders_stream", stream_data)
+        print(f"✅ Event published to stream: {event.event_type} for order {event.order.id}")
     
     def _generate_tracking_id(self) -> str:
         """
@@ -215,11 +232,22 @@ class OrderService:
                     # Add correlation ID to each event
                     event_data['correlation_id'] = correlation_id
                     
-                    # Publish event
+                    # Publish to Redis pub/sub for backward compatibility
                     await self.redis.publish(
                         "pizza_orders",
                         json.dumps(event_data, default=str)
                     )
+                    
+                    # Add to Redis Stream for persistence
+                    stream_data = {
+                        "event_type": event_data.get("event_type", "batch_event"),
+                        "correlation_id": correlation_id,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "data": json.dumps(event_data, default=str)
+                    }
+                    
+                    await self.redis.add_to_stream("pizza_orders_stream", stream_data)
+                    
                     processed_count += 1
                     
                 except Exception as e:

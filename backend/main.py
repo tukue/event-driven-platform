@@ -6,8 +6,14 @@ from services.order_service import OrderService
 from services.delivery_service import DeliveryService
 from services.state_service import StateService, CachedStateService
 from services.metrics_service import MetricsService
+from services.stream_consumer import event_processor
 from models import PizzaOrder, OrderStatus, EventBatch, BatchResult
 import asyncio
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Pizza Delivery Marketplace")
 
@@ -33,9 +39,14 @@ async def startup():
     base_state_service = StateService(redis_client)
     state_service = CachedStateService(base_state_service, redis_client)
     metrics_service = MetricsService(redis_client)
+    
+    # Start the stream consumer for event processing
+    asyncio.create_task(event_processor.start())
+    logger.info("Stream consumer started")
 
 @app.on_event("shutdown")
 async def shutdown():
+    await event_processor.stop()
     await redis_client.disconnect()
 
 @app.post("/api/orders")

@@ -12,11 +12,19 @@ function SupplierPanel({ orders }) {
     notes: '',
     estimatedTime: '30'
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const pendingOrders = orders.filter(e => e.order.status === 'pending_supplier')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (isSubmitting) {
+      console.log('Already submitting, please wait...')
+      return
+    }
+    
+    setIsSubmitting(true)
     
     try {
       console.log('Submitting order:', form)
@@ -31,6 +39,8 @@ function SupplierPanel({ orders }) {
         })
       })
       
+      console.log('Response status:', response.status)
+      
       if (!response.ok) {
         const error = await response.text()
         console.error('Failed to create order:', error)
@@ -40,11 +50,14 @@ function SupplierPanel({ orders }) {
       
       const result = await response.json()
       console.log('Order created:', result)
+      alert('✅ Order created successfully!')
       
       setForm({ supplier_name: '', pizza_name: '', supplier_price: '', markup_percentage: '30' })
     } catch (error) {
       console.error('Error creating order:', error)
       alert('Error: ' + error.message)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -101,8 +114,8 @@ function SupplierPanel({ orders }) {
             style={{ padding: '6px', fontSize: '13px' }}
           />
         </div>
-        <button type="submit" style={{ width: '100%', padding: '8px', backgroundColor: '#ff6b35', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
-          Create Order
+        <button type="submit" disabled={isSubmitting} style={{ width: '100%', padding: '8px', backgroundColor: isSubmitting ? '#ccc' : '#ff6b35', color: 'white', border: 'none', borderRadius: '4px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '13px' }}>
+          {isSubmitting ? 'Creating...' : 'Create Order'}
         </button>
       </form>
 

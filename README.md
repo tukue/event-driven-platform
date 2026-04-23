@@ -133,7 +133,7 @@ python test_grafana_metrics.py
 ```
 
 3. **Configure Grafana**
-- See [GRAFANA_SETUP.md](GRAFANA_SETUP.md) for detailed instructions
+- See [docs/GRAFANA_SETUP.md](docs/GRAFANA_SETUP.md) for detailed instructions
 - Import dashboard from `grafana/dashboard-orders-delivered.json`
 
 ### Available Metrics
@@ -174,9 +174,9 @@ event-driven-platform/
 │   │       └── useWebSocket.js
 │   ├── package.json
 │   └── vite.config.js
-├── DOCUMENTATION.md
-├── DEPLOYMENT.md
-└── README.md
+├── docs/                       # Project Documentation
+├── README.md
+└── .gitignore
 ```
 
 ## 🎯 Key Concepts Demonstrated
@@ -207,8 +207,8 @@ event-driven-platform/
 
 **Backend (.env):**
 ```env
-REDIS_HOST=redis-17146.crce175.eu-north-1-1.ec2.cloud.redislabs.com
-REDIS_PORT=17146
+REDIS_HOST=your-redis-host.cloud.redislabs.com
+REDIS_PORT=6379
 REDIS_USERNAME=default
 REDIS_PASSWORD=your-password
 REDIS_DB=0
@@ -257,12 +257,12 @@ VITE_API_URL=https://your-backend-url
 
 ## 📚 Documentation
 
-- [Complete Documentation](DOCUMENTATION.md)
-- [Deployment Guide](DEPLOYMENT.md)
-- [Free Tier Deployment](FREE-TIER-DEPLOYMENT.md)
-- [Grafana Setup Guide](GRAFANA_SETUP.md)
-- [Grafana Testing Guide](GRAFANA_TESTING_GUIDE.md)
-- [Grafana Quick Reference](GRAFANA_QUICK_REFERENCE.md)
+- [Complete Documentation](docs/DOCUMENTATION.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Free Tier Deployment](docs/FREE-TIER-DEPLOYMENT.md)
+- [Grafana Setup Guide](docs/GRAFANA_SETUP.md)
+- [Grafana Testing Guide](docs/GRAFANA_TESTING_GUIDE.md)
+- [Grafana Quick Reference](docs/GRAFANA_QUICK_REFERENCE.md)
 - [API Documentation](http://localhost:8000/docs)
 
 ## 🚀 Deployment
@@ -272,7 +272,7 @@ Deploy on free tier:
 - **Backend:** Render / Railway
 - **Database:** Redis Cloud (free 30MB)
 
-See [FREE-TIER-DEPLOYMENT.md](FREE-TIER-DEPLOYMENT.md) for detailed instructions.
+See [docs/FREE-TIER-DEPLOYMENT.md](docs/FREE-TIER-DEPLOYMENT.md) for detailed instructions.
 
 ## 🤝 Contributing
 
@@ -284,8 +284,7 @@ MIT License - feel free to use for learning and portfolio purposes.
 
 ## 👤 Author
 
-** Tukue Gebremariam Gebregergis*
-- Portfolio: 
+**Tukue Gebremariam Gebregergis**
 - LinkedIn: https://www.linkedin.com/in/tukuegebremariam/
 - GitHub: https://github.com/tukue
 

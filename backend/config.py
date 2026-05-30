@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     redis_username: Optional[str] = None
     redis_password: str = ""
     redis_db: int = 0
+    cors_allow_origins: str = "http://localhost:5173,http://localhost:3000"
     
     class Config:
-        # Look for .env in backend directory
         env_file = Path(__file__).parent / ".env"
         env_file_encoding = 'utf-8'
 

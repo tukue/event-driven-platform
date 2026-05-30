@@ -2,6 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from redis_client import redis_client
+from config import settings
 from services.order_service import OrderService
 from services.delivery_service import DeliveryService
 from services.state_service import StateService, CachedStateService
@@ -19,7 +20,7 @@ app = FastAPI(title="Pizza Delivery Marketplace")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=settings.cors_allow_origins.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,77 +1,107 @@
 # Event-Driven Pizza Delivery Platform
 
-A **real-time, event-driven order management system** demonstrating enterprise-grade architectural patterns with React, FastAPI, and Redis Cloud. Supports a complete pizza delivery lifecycle across **Supplier**, **Customer**, and **Dispatch** roles with live WebSocket synchronization, Redis Streams for event persistence, and Grafana-exportable metrics.
+A **real-time, event-driven order management marketplace** demonstrating enterprise-grade architectural patterns with React, FastAPI, and Redis Cloud. Supports a complete pizza delivery lifecycle across **Supplier**, **Customer**, and **Dispatch** roles with live WebSocket synchronization, Redis Streams for event persistence, and Grafana-exportable metrics.
+
+---
+
+## Business Problem
+
+Small and medium pizza businesses lack affordable, real-time order management systems. Existing solutions are either:
+
+- **Monolithic POS systems** — expensive, closed, single-location only
+- **Generic delivery apps** — take 20-30% commission per order, no supplier-branding control
+- **Manual workflows** — phone/paper-based, error-prone, no visibility
+
+This platform demonstrates how **event-driven architecture** solves marketplace coordination challenges: three independent roles (supplier, customer, dispatch) need to observe and react to the same order state in real-time without tight coupling. Redis Pub/Sub provides instant broadcast, Redis Streams provides durable audit, and the dual-write pattern gives both without sacrificing either.
 
 ---
 
 ## Architecture Overview
 
+The system follows a **layered, event-driven architecture** with four tiers:
+
+| Layer | Technology | Responsibility |
+|-------|-----------|---------------|
+| **Presentation** | React 18 + Vite 6 | UI components per role, WebSocket for live updates |
+| **API / Gateway** | FastAPI (ASGI) | REST endpoints + WebSocket server, request validation |
+| **Service / Domain** | Python services | Order lifecycle, delivery tracking, state aggregation, metrics, stream processing |
+| **Data / Messaging** | Redis Cloud | KV storage, Pub/Sub, Streams, cache (4 concerns, 1 infra) |
+
+### Component Diagram
+
 ```mermaid
 graph TB
-    subgraph Frontend["React Frontend (Vite)"]
-        SP[SupplierPanel]
-        CP[CustomerPanel]
-        DP[DispatchPanel]
-        OP[OrdersPanel]
-        DT[DeliveryTracker]
-        SD[SystemDashboard]
-        WS[useWebSocket Hook]
+    classDef frontend fill:#1a1a2e,stroke:#e94560,color:#fff
+    classDef backend fill:#16213e,stroke:#0f3460,color:#fff
+    classDef redis fill:#1a1a2e,stroke:#e94560,color:#fff
+    classDef monitor fill:#16213e,stroke:#0f3460,color:#fff
+    classDef note fill:#2d2d2d,stroke:#666,color:#ccc,stroke-dasharray: 5 5
+
+    subgraph Frontend["Presentation Layer — React SPA (Vite)"]
+        SP["SupplierPanel<br/><i>create, accept, reject</i>"]
+        CP["CustomerPanel<br/><i>browse, accept orders</i>"]
+        DP["DispatchPanel<br/><i>assign drivers</i>"]
+        OP["OrdersPanel<br/><i>status controls</i>"]
+        DT["DeliveryTracker<br/><i>progress stepper, ETA</i>"]
+        SD["SystemDashboard<br/><i>stats, active drivers</i>"]
+        WS["useWebSocket<br/><i>auto-reconnect hook</i>"]
     end
 
-    subgraph Backend["FastAPI Backend (Python 3.11+)"]
-        API[REST API Endpoints]
-        WS_EP[WebSocket /ws]
-        OS[OrderService]
-        DS[DeliveryService]
-        SS[StateService<br/>+ CachedStateService]
-        MS[MetricsService]
-        SC[StreamConsumer]
+    subgraph Backend["Service Layer — FastAPI (Python 3.11+)"]
+        API["REST Controllers<br/><i>13 endpoints</i>"]
+        WSEP["WebSocket /ws<br/><i>Pub/Sub → client</i>"]
+        OS["OrderService<br/><i>state machine, CRUD</i>"]
+        DS["DeliveryService<br/><i>ETA, progress, timeline</i>"]
+        SS["CachedStateService<br/><i>5s TTL cache-aside</i>"]
+        MS["MetricsService<br/><i>Prometheus + JSON</i>"]
+        SC["StreamConsumer<br/><i>consumer group processor</i>"]
     end
 
-    subgraph Redis["Redis Cloud"]
-        KV[Key-Value Store<br/>order:{uuid} -> JSON]
-        PS[Pub/Sub Channel<br/>pizza_orders]
-        ST[Stream<br/>pizza_orders_stream]
-        CA[Cache<br/>state_cache:*]
+    subgraph Redis["Data & Messaging Layer — Redis Cloud"]
+        KV[("KV Store<br/><i>order:{uuid} → JSON</i>")]
+        PS[("Pub/Sub<br/><i>pizza_orders channel</i>")]
+        ST[("Streams<br/><i>pizza_orders_stream</i>")]
+        CA[("Cache<br/><i>state_cache:* (5s TTL)</i>")]
     end
 
-    subgraph Monitoring["Monitoring"]
-        GF[Grafana Dashboard]
-        PM[Prometheus Metrics<br/>/metrics]
-        JM[JSON Metrics<br/>/api/metrics]
+    subgraph Monitoring["Monitoring Layer"]
+        GF["Grafana Dashboard<br/><i>7 pre-built panels</i>"]
+        PM["/metrics<br/><i>Prometheus format</i>"]
+        JM["/api/metrics<br/><i>JSON format</i>"]
     end
 
-    SP -->|REST| API
-    CP -->|REST| API
-    DP -->|REST| API
-    OP -->|REST| API
-    DT -->|REST| API
-    WS --- WS_EP
+    SP -->|"POST/GET"| API
+    CP -->|"POST/GET"| API
+    DP -->|"POST/GET"| API
+    OP -->|"POST/GET"| API
+    DT -->|"GET"| API
+    WS -->|"ws://"| WSEP
 
-    API --> OS
-    API --> DS
-    API --> SS
-    API --> MS
+    API -->|delegates| OS
+    API -->|delegates| DS
+    API -->|delegates| SS
+    API -->|delegates| MS
 
-    OS --> KV
-    OS --> PS
-    OS --> ST
-    SS --> CA
-    SS --> KV
-    MS --> KV
-    SC --> ST
+    OS -->|"save/read"| KV
+    OS -->|"publish"| PS
+    OS -->|"xadd"| ST
+    SS -->|"cache get/set"| CA
+    SS -->|"scan orders"| KV
+    MS -->|"aggregate"| KV
+    SC -->|"xreadgroup"| ST
+    SC -->|"callback"| OS
 
-    WS_EP --> PS
+    WSEP -->|"subscribe"| PS
 
-    MS --> PM
-    MS --> JM
-    PM --> GF
-    JM --> GF
+    MS -->|"expose"| PM
+    MS -->|"expose"| JM
+    PM -->|"scrape"| GF
+    JM -->|"query"| GF
 
-    SC -.->|Async Processing| OS
+    SC -.->|"auto-restart on error"| SC
 ```
 
-### Event Flow
+### Event Flow (Order Creation)
 
 ```mermaid
 sequenceDiagram
@@ -82,16 +112,24 @@ sequenceDiagram
     participant PS as Redis Pub/Sub
     participant ST as Redis Stream
     participant SC as StreamConsumer
+    participant WS as WebSocket
 
-    Client->>API: POST /api/orders
+    Client->>API: POST /api/orders {pizza_name, supplier_name, price}
     API->>OS: create_order()
-    OS->>KV: save order JSON
-    OS->>PS: publish event
-    OS->>ST: xadd event
-    PS-->>Client: WebSocket broadcast
-    SC->>ST: xreadgroup
-    SC->>SC: process event
-    SC-->>OS: optional callback
+    OS->>KV: SET order:{uuid} → JSON
+    OS->>PS: PUBLISH pizza_orders event
+    OS->>ST: XADD pizza_orders_stream *
+    OS-->>API: return OrderEvent
+    API-->>Client: 200 {order_id, status, tracking_id}
+    
+    par Real-time broadcast
+        PS-->>WS: message received
+        WS-->>Client: WebSocket push
+    and Async stream processing
+        SC->>ST: XREADGROUP
+        ST-->>SC: new event
+        SC->>SC: process event
+    end
 ```
 
 ### Order State Machine
@@ -99,16 +137,26 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> pending_supplier: Order Created
-    pending_supplier --> supplier_accepted: Supplier Accepts
-    pending_supplier --> supplier_rejected: Supplier Rejects
+    pending_supplier --> supplier_accepted: Accept
+    pending_supplier --> supplier_rejected: Reject
     supplier_accepted --> customer_accepted: Customer Accepts
-    customer_accepted --> preparing: Start Preparation
+    customer_accepted --> preparing: Start Prep
     preparing --> ready: Pizza Ready
     ready --> dispatched: Driver Assigned
     dispatched --> in_transit: In Transit
     in_transit --> delivered: Delivered
     delivered --> [*]
+    supplier_rejected --> [*]
 ```
+
+### Data Flow Patterns
+
+| Flow | Triggers | Path | Latency |
+|------|----------|------|---------|
+| **Command** | User action (POST) | Client → REST → Service → Redis KV | ~5-20ms |
+| **Real-time event** | State change | Service → Pub/Sub → WebSocket → Client | ~2-10ms |
+| **Durable event** | State change | Service → Stream → Consumer Group → Handler | ~10-50ms |
+| **State query** | GET /api/state | Client → REST → CacheService → Redis Cache (or KV fallback) | ~2-5ms cached, ~20-50ms miss |
 
 ---
 
@@ -122,6 +170,21 @@ stateDiagram-v2
 | **Consumer Groups** | Redis Streams xreadgroup | Guaranteed processing, auto-restart, horizontal scale |
 | **Dual-Write** | Event → Pub/Sub (instant) + Streams (persistent) | Real-time UI + durable event log |
 | **Batch Processing** | Atomic event batches with rollback | Transactional consistency for multi-event operations |
+
+---
+
+## Design Considerations & Tradeoffs
+
+| Decision | Rationale | Tradeoff |
+|----------|-----------|----------|
+| **Redis as single datastore** | KV + Pub/Sub + Streams + Cache in one system simplifies operations | Single point of failure; no relational queries; manual index management via key conventions |
+| **Dual-write (Pub/Sub + Streams)** | Instant broadcast for live UI + durable log for replay/audit | Every event written twice; if one path fails, state can drift (mitigated by KV as source of truth) |
+| **Polling WebSocket loop** | Simple implementation with `get_message(timeout=1.0)` polling at 10ms intervals | Wastes CPU cycles vs push-based callbacks; acceptable for demo scale |
+| **In-memory mocked tests** | Zero-infrastructure CI; runs in seconds; deterministic | Cannot catch Redis-specific failures (connection drops, stream trim, race conditions) |
+| **Cache-aside with 5s TTL** | Drastically reduces `KEYS` scans on state queries | `/api/state` is potentially 5s stale; acceptable for dashboard use cases |
+| **No auth / no persistence layer besides Redis** | Keeps demo simple to set up and understand | Not production-ready; orders lost on Redis flush; no user isolation |
+| **Python async + FastAPI** | Excellent for I/O-bound workloads (Redis calls, WebSocket connections) | GIL-bound CPU work blocks event loop; not suitable for heavy computation |
+| **Saga via rollback events** | Lightweight compensation for failed batches without distributed transactions | Best-effort only; no guaranteed compensation if rollback itself fails |
 
 ---
 
@@ -178,12 +241,23 @@ stateDiagram-v2
 
 ## Quick Start
 
+**Configure API base URL:**
+
+The frontend reads the backend URL from the `VITE_API_URL` environment variable (defaults to `http://localhost:8000`):
+
+```bash
+# Optional: point frontend at a different backend
+export VITE_API_URL=https://your-backend.com
+```
+
+**Run locally:**
+
 ```bash
 # Backend
 cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # Add your Redis Cloud credentials
+cp .env.example .env   # Add your Redis Cloud credentials + configure CORS_ALLOW_ORIGINS
 uvicorn main:app --reload     # → http://localhost:8000
 
 # Frontend (separate terminal)
@@ -254,8 +328,9 @@ Tests use a fully **mocked Redis client** (in-memory dict-based storage), so no 
 
 Deploy free-tier:
 - **Backend**: Render / Railway (FastAPI + Uvicorn)
-- **Frontend**: Vercel / Netlify (Vite build output)
+- **Frontend**: Vercel / Netlify (Vite build output, set `VITE_API_URL` env var)
 - **Database**: Redis Cloud (free 30 MB tier)
+- **CORS**: Set `CORS_ALLOW_ORIGINS` in backend env to your frontend URL
 
 See [docs/FREE-TIER-DEPLOYMENT.md](docs/FREE-TIER-DEPLOYMENT.md) for detailed instructions.
 

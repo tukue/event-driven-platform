@@ -6,8 +6,9 @@ import random
 import string
 
 class OrderService:
-    def __init__(self, redis_client):
+    def __init__(self, redis_client, kafka_service=None):
         self.redis = redis_client
+        self.kafka = kafka_service
     
     async def create_order(self, order: PizzaOrder) -> OrderEvent:
         print(f"📝 Creating order: {order.pizza_name} from {order.supplier_name}")
@@ -172,6 +173,11 @@ class OrderService:
         
         await self.redis.add_to_stream("pizza_orders_stream", stream_data)
         print(f"✅ Event published to stream: {event.event_type} for order {event.order.id}")
+
+        # Publish to Kafka (if configured)
+        if self.kafka:
+            await self.kafka.publish_event(event_data)
+            print(f"✅ Event published to Kafka: {event.event_type} for order {event.order.id}")
     
     def _generate_tracking_id(self) -> str:
         """
@@ -247,7 +253,11 @@ class OrderService:
                     }
                     
                     await self.redis.add_to_stream("pizza_orders_stream", stream_data)
-                    
+
+                    # Publish to Kafka (if configured)
+                    if self.kafka:
+                        await self.kafka.publish_event(event_data)
+
                     processed_count += 1
                     
                 except Exception as e:

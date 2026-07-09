@@ -4,10 +4,14 @@ import uuid
 import json
 import random
 import string
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrderService:
-    def __init__(self, redis_client):
+    def __init__(self, redis_client, kafka_service=None):
         self.redis = redis_client
+        self.kafka = kafka_service
     
     async def create_order(self, order: PizzaOrder) -> OrderEvent:
         print(f"📝 Creating order: {order.pizza_name} from {order.supplier_name}")
@@ -172,6 +176,19 @@ class OrderService:
         
         await self.redis.add_to_stream("pizza_orders_stream", stream_data)
         print(f"✅ Event published to stream: {event.event_type} for order {event.order.id}")
+
+        # Publish to Kafka (if configured)
+        if self.kafka:
+            try:
+                await self.kafka.publish_event(event_data)
+                print(f"✅ Event published to Kafka: {event.event_type} for order {event.order.id}")
+            except Exception as e:
+                logger.warning(
+                    "Kafka publish failed for event %s on order %s (non-blocking): %s",
+                    event.event_type,
+                    event.order.id,
+                    e,
+                )
     
     def _generate_tracking_id(self) -> str:
         """
@@ -247,7 +264,19 @@ class OrderService:
                     }
                     
                     await self.redis.add_to_stream("pizza_orders_stream", stream_data)
-                    
+
+                    # Publish to Kafka (if configured)
+                    if self.kafka:
+                        try:
+                            await self.kafka.publish_event(event_data)
+                        except Exception as e:
+                            logger.warning(
+                                "Kafka publish failed for batch event %s (correlation_id=%s, non-blocking): %s",
+                                event_data.get("event_type", "batch_event"),
+                                correlation_id,
+                                e,
+                            )
+
                     processed_count += 1
                     
                 except Exception as e:

@@ -8,9 +8,11 @@ from services.delivery_service import DeliveryService
 from services.state_service import StateService, CachedStateService
 from services.metrics_service import MetricsService
 from services.stream_consumer import event_processor
+from services.kafka_service import KafkaService, WebSocketBridge
 from models import PizzaOrder, OrderStatus, EventBatch, BatchResult
 import asyncio
 import logging
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +32,25 @@ order_service = None
 delivery_service = None
 state_service = None
 metrics_service = None
+kafka_service = None
+ws_bridge = None
+
+
+def log_task_exception(task: asyncio.Task):
+    if task.cancelled():
+        return
+
+    try:
+        exception = task.exception()
+    except Exception as e:
+        logger.error("Failed to inspect background task result: %s", e)
+        return
+
+    if exception:
+        logger.error(
+            "WebSocket bridge task died",
+            exc_info=(type(exception), exception, exception.__traceback__),
+        )
 
 @app.on_event("startup")
 async def startup():
@@ -45,9 +66,26 @@ async def startup():
     asyncio.create_task(event_processor.start())
     logger.info("Stream consumer started")
 
+    # Start Kafka integration if configured
+    global kafka_service, ws_bridge
+    if settings.kafka_bootstrap_servers:
+        kafka_service = KafkaService(settings.kafka_bootstrap_servers, settings.kafka_topic)
+        await kafka_service.start()
+        order_service.kafka = kafka_service  # inject into order service
+
+        ws_bridge = WebSocketBridge(settings.kafka_bootstrap_servers, settings.kafka_topic)
+        await ws_bridge.start()
+        ws_bridge_task = asyncio.create_task(ws_bridge.broadcast_loop())
+        ws_bridge_task.add_done_callback(log_task_exception)
+        logger.info(f"Kafka integration started ({settings.kafka_bootstrap_servers}, topic={settings.kafka_topic})")
+
 @app.on_event("shutdown")
 async def shutdown():
     await event_processor.stop()
+    if kafka_service:
+        await kafka_service.stop()
+    if ws_bridge:
+        await ws_bridge.stop()
     await redis_client.disconnect()
 
 @app.post("/api/orders")
@@ -200,14 +238,21 @@ async def get_prometheus_metrics():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    pubsub = await redis_client.subscribe("pizza_orders")
-    
-    try:
-        while True:
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-            if message and message["type"] == "message":
-                await websocket.send_text(message["data"])
-            await asyncio.sleep(0.01)
-    except WebSocketDisconnect:
-        await pubsub.unsubscribe("pizza_orders")
-        await pubsub.close()
+    if ws_bridge:
+        ws_bridge.add_connection(websocket)
+        try:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            ws_bridge.remove_connection(websocket)
+    else:
+        pubsub = await redis_client.subscribe("pizza_orders")
+        try:
+            while True:
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message and message["type"] == "message":
+                    await websocket.send_text(message["data"])
+                await asyncio.sleep(0.01)
+        except WebSocketDisconnect:
+            await pubsub.unsubscribe("pizza_orders")
+            await pubsub.close()

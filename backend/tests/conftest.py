@@ -10,6 +10,7 @@ os.environ['REDIS_PORT'] = '6379'
 os.environ['REDIS_USERNAME'] = 'test'
 os.environ['REDIS_PASSWORD'] = 'test'
 os.environ['REDIS_DB'] = '0'
+os.environ['KAFKA_BOOTSTRAP_SERVERS'] = ''
 
 from main import app
 from services.order_service import OrderService
@@ -230,6 +231,8 @@ async def client(mocker):
     main.delivery_service = DeliveryService(mock_redis)
     base_state_service = StateService(mock_redis)
     main.state_service = CachedStateService(base_state_service, mock_redis)
+    main.kafka_service = None
+    main.ws_bridge = None
     
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac

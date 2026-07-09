@@ -4,6 +4,9 @@ import uuid
 import json
 import random
 import string
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrderService:
     def __init__(self, redis_client, kafka_service=None):
@@ -176,8 +179,16 @@ class OrderService:
 
         # Publish to Kafka (if configured)
         if self.kafka:
-            await self.kafka.publish_event(event_data)
-            print(f"✅ Event published to Kafka: {event.event_type} for order {event.order.id}")
+            try:
+                await self.kafka.publish_event(event_data)
+                print(f"✅ Event published to Kafka: {event.event_type} for order {event.order.id}")
+            except Exception as e:
+                logger.warning(
+                    "Kafka publish failed for event %s on order %s (non-blocking): %s",
+                    event.event_type,
+                    event.order.id,
+                    e,
+                )
     
     def _generate_tracking_id(self) -> str:
         """
@@ -256,7 +267,15 @@ class OrderService:
 
                     # Publish to Kafka (if configured)
                     if self.kafka:
-                        await self.kafka.publish_event(event_data)
+                        try:
+                            await self.kafka.publish_event(event_data)
+                        except Exception as e:
+                            logger.warning(
+                                "Kafka publish failed for batch event %s (correlation_id=%s, non-blocking): %s",
+                                event_data.get("event_type", "batch_event"),
+                                correlation_id,
+                                e,
+                            )
 
                     processed_count += 1
                     

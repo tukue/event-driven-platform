@@ -35,6 +35,23 @@ metrics_service = None
 kafka_service = None
 ws_bridge = None
 
+
+def log_task_exception(task: asyncio.Task):
+    if task.cancelled():
+        return
+
+    try:
+        exception = task.exception()
+    except Exception as e:
+        logger.error("Failed to inspect background task result: %s", e)
+        return
+
+    if exception:
+        logger.error(
+            "WebSocket bridge task died",
+            exc_info=(type(exception), exception, exception.__traceback__),
+        )
+
 @app.on_event("startup")
 async def startup():
     await redis_client.connect()
@@ -58,7 +75,8 @@ async def startup():
 
         ws_bridge = WebSocketBridge(settings.kafka_bootstrap_servers, settings.kafka_topic)
         await ws_bridge.start()
-        asyncio.create_task(ws_bridge.broadcast_loop())
+        ws_bridge_task = asyncio.create_task(ws_bridge.broadcast_loop())
+        ws_bridge_task.add_done_callback(log_task_exception)
         logger.info(f"Kafka integration started ({settings.kafka_bootstrap_servers}, topic={settings.kafka_topic})")
 
 @app.on_event("shutdown")

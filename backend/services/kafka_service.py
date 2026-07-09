@@ -26,6 +26,9 @@ class KafkaService:
             logger.info("Kafka producer stopped")
 
     async def publish_event(self, event_data: dict):
+        if not self.producer:
+            raise RuntimeError("Kafka producer not started. Call start() first.")
+
         order_id = event_data.get("order", {}).get("id")
         await self.producer.send(
             topic=self.topic,
@@ -72,6 +75,10 @@ class WebSocketBridge:
         self.connections.discard(websocket)
 
     async def broadcast_loop(self):
+        if not self.consumer:
+            logger.error("Kafka consumer not initialized. Call start() first.")
+            return
+
         try:
             async for msg in self.consumer:
                 if not self.running:

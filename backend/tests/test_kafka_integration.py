@@ -107,6 +107,12 @@ async def test_kafka_service_publish_event_no_order_id(kafka_service):
 
 
 @pytest.mark.asyncio
+async def test_kafka_service_publish_event_requires_started_producer(kafka_service):
+    with pytest.raises(RuntimeError, match="Kafka producer not started"):
+        await kafka_service.publish_event({"event_type": "order.created", "order": {"id": "1"}})
+
+
+@pytest.mark.asyncio
 async def test_kafka_service_publish_multiple_events(kafka_service):
     await kafka_service.start()
     events = [
@@ -229,8 +235,12 @@ async def test_order_service_kafka_failure_does_not_block_redis(mock_redis, samp
 
     service = OrderService(mock_redis, kafka_service=kafka)
 
-    with pytest.raises(Exception):
-        await service.create_order(sample_event.order)
+    event = await service.create_order(sample_event.order)
+
+    assert event.event_type == "order.created"
+    kafka.producer.send.assert_awaited_once()
+    assert mock_redis.publish.await_count == 1
+    assert "order:" in next(iter(mock_redis._storage.keys()))
 
 
 @pytest.mark.asyncio
@@ -284,9 +294,48 @@ async def test_order_service_batch_does_not_duplicate_events(mock_redis, mock_ka
         assert call.kwargs["value"].get("correlation_id") == "corr-123"
 
 
+@pytest.mark.asyncio
+async def test_order_service_batch_kafka_failure_does_not_fail_batch(mock_redis, mock_kafka_producer):
+    from services.kafka_service import KafkaService
+
+    kafka = KafkaService("localhost:9092")
+    kafka.producer = mock_kafka_producer
+    kafka.producer.start = AsyncMock()
+    kafka.producer.stop = AsyncMock()
+    kafka.producer.send.side_effect = Exception("Kafka down")
+
+    service = OrderService(mock_redis, kafka_service=kafka)
+
+    batch_events = [
+        {"event_type": "order.created", "order": {"id": "batch-1"}, "timestamp": datetime.utcnow().isoformat()},
+        {"event_type": "order.dispatched", "order": {"id": "batch-2"}, "timestamp": datetime.utcnow().isoformat()},
+    ]
+
+    result = await service.dispatch_events(batch_events, correlation_id="test-correlation")
+
+    assert result.success is True
+    assert result.processed_count == 2
+    assert result.failed_count == 0
+    assert result.errors == []
+    assert kafka.producer.send.await_count == 2
+    assert mock_redis.publish.await_count == 2
+
+
 # ---------------------------------------------------------------------------
 # WebSocket Bridge
 # ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_websocket_bridge_broadcast_loop_requires_started_consumer(caplog):
+    from services.kafka_service import WebSocketBridge
+
+    bridge = WebSocketBridge("localhost:9092")
+
+    with caplog.at_level("ERROR", logger="services.kafka_service"):
+        await bridge.broadcast_loop()
+
+    assert "Kafka consumer not initialized" in caplog.text
+
 
 @pytest.mark.asyncio
 async def test_websocket_bridge_connections():

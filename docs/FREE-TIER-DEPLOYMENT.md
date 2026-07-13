@@ -1,55 +1,49 @@
 # Free Tier Deployment - Event Driven Platform
-## Portfolio Project - $0/Month Deployment Strategy
+## Portfolio Project - Deployment Strategy
 
 ## Overview
-Deploy your event-driven platform completely free for portfolio/consulting demonstrations.
+Deploy your event-driven platform for portfolio/consulting demonstrations.
 
 ---
 
-## 🎯 100% Free Deployment Stack
+## Free Deployment Stack
 
 ### Architecture
 ```
 Frontend (Vercel Free)
     ↓
-Backend (Render Free / Railway Free)
+Backend (Render Free)
     ↓
 Redis Cloud (Free 30MB)
+    ↓
+Kafka (Redpanda Dev Container - Local Only)
 ```
-
-**Total Cost: $0/month** ✅
 
 ---
 
 ## Free Tier Services
 
 ### 1. Frontend Hosting: **Vercel Free Tier**
-- ✅ Unlimited bandwidth
-- ✅ Automatic HTTPS
-- ✅ Global CDN
-- ✅ Automatic deployments from Git
-- ✅ Custom domain support
-- ⚠️ Limit: 100GB bandwidth/month (more than enough)
+- Unlimited bandwidth
+- Automatic HTTPS
+- Global CDN
+- Automatic deployments from Git
+- Custom domain support
+- Limit: 100GB bandwidth/month (more than enough)
 
-### 2. Backend Hosting: **Render Free Tier** (Recommended)
-- ✅ 750 hours/month free
-- ✅ Automatic HTTPS
-- ✅ Git-based deployments
-- ✅ Environment variables
-- ⚠️ Spins down after 15 min inactivity (cold start ~30s)
-- ⚠️ 512MB RAM limit
-
-**Alternative:** Railway Free Tier
-- ✅ $5 free credit/month
-- ✅ No sleep/spin down
-- ✅ Better performance
-- ⚠️ Credit runs out with heavy use
+### 2. Backend Hosting: **Render Free Tier**
+- 750 hours/month free
+- Automatic HTTPS
+- Git-based deployments
+- Environment variables
+- Spins down after 15 min inactivity (cold start ~30s)
+- 512MB RAM limit
 
 ### 3. Database: **Redis Cloud Free Tier** (Already Using)
-- ✅ 30MB storage (enough for 1000+ orders)
-- ✅ Pub/Sub support
-- ✅ High availability
-- ✅ Already provisioned ✓
+- 30MB storage (enough for 1000+ orders)
+- Pub/Sub support
+- High availability
+- Already provisioned
 
 ### 4. Domain: **Free Options**
 - Vercel subdomain: `your-app.vercel.app` (Free)
@@ -61,9 +55,14 @@ Redis Cloud (Free 30MB)
 - UptimeRobot (Free: 50 monitors)
 - Vercel Analytics (Free)
 
+### 6. Event Streaming: **Redpanda Dev Container (Local Only)**
+- Kafka-compatible, zero-cost
+- Runs locally in Docker for development/demo
+- No cloud Kafka needed for portfolio demos
+
 ---
 
-## 🚀 Step-by-Step Free Deployment
+## Step-by-Step Free Deployment
 
 ### Phase 1: Prepare Code (15 minutes)
 
@@ -125,7 +124,7 @@ connection_params["max_connections"] = 10
 2. Sign up with GitHub (free)
 
 **Step 2: Create Web Service**
-1. Click "New +" → "Web Service"
+1. Click "New +" -> "Web Service"
 2. Connect your GitHub repository
 3. Select `backend` folder as root directory
 4. Configure:
@@ -157,7 +156,7 @@ CORS_ORIGINS=https://your-app.vercel.app
 2. Sign up with GitHub (free)
 
 **Step 2: Import Project**
-1. Click "Add New..." → "Project"
+1. Click "Add New..." -> "Project"
 2. Import your GitHub repository
 3. Configure:
    - Framework Preset: Vite
@@ -195,7 +194,63 @@ Commit and push - Render will auto-deploy.
 
 ---
 
-## 🎨 Portfolio Optimization
+## Local Kafka Demo (Redpanda Dev Container)
+
+For portfolio demos, Kafka runs locally via Docker Compose. No cloud Kafka needed.
+
+### Start Kafka Locally
+```bash
+# From project root
+docker compose up -d redpanda
+
+# Verify Redpanda is running
+docker compose logs redpanda
+
+# Create the topic
+docker compose exec redpanda rpk topic create pizza.orders --partitions 3
+```
+
+### Connect Backend to Local Kafka
+
+Add to `backend/.env`:
+```env
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC=pizza.orders
+```
+
+Start the backend with Kafka enabled:
+```bash
+cd backend
+python main.py
+```
+
+### Watch Events Flow in Real-Time
+
+```bash
+# Terminal 1: Watch Kafka events
+docker compose exec redpanda rpk topic consume pizza.orders
+
+# Terminal 2: Create an order via API
+curl -X POST http://localhost:8000/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{"supplier_name":"Pizza Palace","pizza_name":"Margherita","supplier_price":10.0,"markup_percentage":30.0}'
+
+# Terminal 3: Watch WebSocket events (optional)
+# Open browser console and connect to ws://localhost:8000/ws
+```
+
+### Verify Dual-Write
+
+When Kafka is configured, every event goes to both Redis Streams AND Kafka:
+1. Redis Pub/Sub broadcasts instantly to WebSocket clients
+2. Redis Streams persists the event for replay
+3. Kafka provides durable, scalable event backbone
+
+This demonstrates the **dual-write migration pattern** - a key enterprise architecture pattern.
+
+---
+
+## Portfolio Optimization
 
 ### Add Professional Touches
 
@@ -248,7 +303,7 @@ function LandingPage() {
 
 ---
 
-## 📊 Free Tier Limitations & Solutions
+## Free Tier Limitations & Solutions
 
 ### Limitation 1: Backend Sleeps After 15 Minutes
 **Impact:** First request takes 30 seconds (cold start)
@@ -267,8 +322,6 @@ setInterval(() => {
 }, 14 * 60 * 1000)
 ```
 
-3. **Upgrade to Railway ($5/month)** - No sleep
-
 ### Limitation 2: 512MB RAM
 **Impact:** May crash under heavy load
 
@@ -283,11 +336,10 @@ setInterval(() => {
 **Solutions:**
 - Add data cleanup (delete old delivered orders)
 - Archive to JSON file
-- Upgrade to paid tier if needed ($10/month for 100MB)
 
 ---
 
-## 🎯 Portfolio Presentation Tips
+## Portfolio Presentation Tips
 
 ### 1. Create a Demo Video
 - Record 2-3 minute walkthrough
@@ -300,7 +352,7 @@ setInterval(() => {
 ## Event Driven Platform
 Event-driven real-time order management system
 
-**Tech Stack:** React, FastAPI, Redis, WebSocket
+**Tech Stack:** React, FastAPI, Redis, WebSocket, Kafka
 **Live Demo:** https://pizza-delivery.vercel.app
 **Source Code:** https://github.com/yourusername/pizza-delivery
 **Video Demo:** https://youtube.com/...
@@ -308,21 +360,23 @@ Event-driven real-time order management system
 **Key Features:**
 - Real-time order updates via WebSocket
 - Event-driven architecture with Redis Pub/Sub
+- Kafka dual-write for scalable event streaming
 - Multi-role system (Supplier, Customer, Dispatch)
 - State machine for order lifecycle
 - Responsive UI with live status updates
 ```
 
 ### 3. Prepare Talking Points
-- "Built event-driven architecture using Redis Pub/Sub"
-- "Implemented real-time WebSocket communication"
+- "Built event-driven architecture using Redis Pub/Sub and Kafka"
+- "Implemented dual-write migration pattern for zero-downtime migration"
+- "Real-time WebSocket communication with auto-reconnect"
 - "Deployed on free tier cloud infrastructure"
 - "Handles concurrent users with async Python"
 - "State management with React hooks"
 
 ---
 
-## 📈 Monitoring Your Free Deployment
+## Monitoring Your Free Deployment
 
 ### 1. Uptime Monitoring (Free)
 **UptimeRobot:**
@@ -346,7 +400,7 @@ sentry_sdk.init(dsn="your-dsn")
 
 ---
 
-## 🔧 Maintenance on Free Tier
+## Maintenance on Free Tier
 
 ### Daily
 - Check if app is running
@@ -359,24 +413,23 @@ sentry_sdk.init(dsn="your-dsn")
 
 ### Monthly
 - Update dependencies
-- Review costs (should be $0)
 - Backup important data
 
 ---
 
-## 💰 Cost Breakdown
+## Cost Breakdown
 
-| Service | Free Tier | Paid Upgrade | When to Upgrade |
-|---------|-----------|--------------|-----------------|
-| Vercel | ✅ Free | $20/month | Never needed for portfolio |
-| Render | ✅ Free | $7/month | If cold starts annoying |
-| Redis Cloud | ✅ Free | $10/month | If >1000 orders |
-| Domain | ✅ Free | $12/year | For professional look |
-| **Total** | **$0/month** | **$17-30/month** | **Optional** |
+| Service | Free Tier | Notes |
+|---------|-----------|-------|
+| Vercel | Free | Unlimited bandwidth, 100GB transfer |
+| Render | Free | 750 hours/month, 512MB RAM |
+| Redis Cloud | Free | 30MB storage, Pub/Sub |
+| Kafka (Redpanda) | Free | Local Docker only |
+| Domain | Free | Vercel/Render subdomains |
 
 ---
 
-## 🚀 Quick Deploy Checklist
+## Quick Deploy Checklist
 
 - [ ] Code pushed to GitHub
 - [ ] Backend deployed to Render
@@ -387,6 +440,7 @@ sentry_sdk.init(dsn="your-dsn")
 - [ ] WebSocket connecting
 - [ ] Orders creating successfully
 - [ ] Real-time updates working
+- [ ] Kafka demo working locally
 - [ ] Demo data added
 - [ ] README updated with live link
 - [ ] Screenshots added
@@ -394,21 +448,22 @@ sentry_sdk.init(dsn="your-dsn")
 
 ---
 
-## 📝 Sample Portfolio Description
+## Sample Portfolio Description
 
 ```markdown
 # Event-Driven Platform
 
-A real-time order management system demonstrating event-driven architecture 
-and WebSocket communication.
+A real-time order management system demonstrating event-driven architecture
+and WebSocket communication with Kafka integration.
 
-🔗 **Live Demo:** https://pizza-delivery.vercel.app
-📹 **Video Demo:** [2-minute walkthrough]
-💻 **Source Code:** https://github.com/yourusername/pizza-delivery
+**Live Demo:** https://pizza-delivery.vercel.app
+**Video Demo:** [2-minute walkthrough]
+**Source Code:** https://github.com/yourusername/pizza-delivery
 
 ## Technical Highlights
 
-- **Event-Driven Architecture:** Redis Pub/Sub for real-time event broadcasting
+- **Event-Driven Architecture:** Redis Pub/Sub + Kafka for real-time event broadcasting
+- **Dual-Write Pattern:** Events published to both Redis and Kafka simultaneously
 - **WebSocket Communication:** Live order updates across all connected clients
 - **State Machine:** Complete order lifecycle management
 - **Async Python:** FastAPI with async/await for high concurrency
@@ -432,6 +487,7 @@ and WebSocket communication.
 **Frontend:** React 18, Vite, WebSocket API
 **Backend:** FastAPI, Python 3.11, Uvicorn
 **Database:** Redis Cloud (Pub/Sub + Storage)
+**Event Streaming:** Kafka/Redpanda (dual-write)
 **Deployment:** Vercel (Frontend), Render (Backend)
 
 ## Local Development
@@ -440,17 +496,18 @@ and WebSocket communication.
 
 ---
 
-**Deployed on 100% free tier infrastructure** ✨
+**Deployed on free tier infrastructure**
 ```
 
 ---
 
-## 🎓 Learning Outcomes to Highlight
+## Learning Outcomes to Highlight
 
 For consulting/interviews, emphasize:
 
 1. **Event-Driven Architecture**
    - Pub/Sub pattern implementation
+   - Dual-write migration strategy
    - Decoupled services
    - Scalable design
 
@@ -458,32 +515,36 @@ For consulting/interviews, emphasize:
    - WebSocket implementation
    - State synchronization
    - Connection management
+   - Auto-reconnect patterns
 
 3. **Cloud Deployment**
    - CI/CD with Git
    - Environment management
    - Free tier optimization
+   - Container orchestration
 
 4. **Full-Stack Development**
    - React frontend
    - Python backend
    - Database integration
+   - Event streaming
 
 5. **Production Readiness**
    - Error handling
    - Monitoring
    - Security (HTTPS, CORS)
+   - Graceful degradation
 
 ---
 
-## 🎉 You're Ready!
+## You're Ready!
 
 Your pizza delivery app is now:
-- ✅ Deployed on free tier
-- ✅ Accessible worldwide
-- ✅ Professional looking
-- ✅ Portfolio ready
-- ✅ Costs $0/month
+- Deployed on free tier
+- Accessible worldwide
+- Professional looking
+- Portfolio ready
+- Kafka-ready for demos
 
 **Next Steps:**
 1. Deploy following the steps above
@@ -492,5 +553,4 @@ Your pizza delivery app is now:
 4. Iterate based on feedback
 
 **Deployment Time:** ~30 minutes total
-**Monthly Cost:** $0
-**Portfolio Impact:** High ⭐⭐⭐⭐⭐
+**Portfolio Impact:** High

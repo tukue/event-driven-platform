@@ -36,7 +36,7 @@ function DispatchPanel({ orders }) {
               <option value="">Select Order</option>
               {readyOrders.map(e => (
                 <option key={e.order.id} value={e.order.id}>
-                  {e.order.pizza_name} → {e.order.delivery_address}
+                  {e.order.item_name} → {e.order.delivery_address}
                 </option>
               ))}
             </select>

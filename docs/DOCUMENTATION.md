@@ -2,7 +2,7 @@
 
 ## Overview
 
-An event-driven platform built with React, FastAPI, and Redis Cloud. The system connects suppliers, customers, and dispatch services through real-time WebSocket communication and Redis Pub/Sub messaging.
+An event-driven platform built with React, FastAPI, and Redis Cloud. The system connects sources, buyers, and dispatch services through real-time WebSocket communication and Redis Pub/Sub messaging.
 
 ## Architecture
 
@@ -41,26 +41,26 @@ An event-driven platform built with React, FastAPI, and Redis Cloud. The system 
 
 ### Order Lifecycle
 
-1. **Order Creation** (`pending_supplier`)
-   - Supplier creates pizza order with base price and markup percentage
+1. **Order Creation** (`pending_source`)
+   - Source creates order with base price and markup percentage
    - Order stored in Redis with unique ID
    - Event published: `order.created`
 
-2. **Supplier Response** (`supplier_accepted` / `supplier_rejected`)
-   - Supplier reviews pending order
+2. **Source Response** (`source_accepted` / `source_rejected`)
+   - Source reviews pending order
    - Can accept with notes and estimated delivery time
    - Can reject with reason
-   - Events: `order.supplier_accepted` or `order.supplier_rejected`
+   - Events: `order.source_accepted` or `order.source_rejected`
 
-3. **Customer Acceptance** (`customer_accepted`)
-   - Customer views supplier-accepted orders
+3. **Buyer Acceptance** (`buyer_accepted`)
+   - Buyer views source-accepted orders
    - Sees pricing breakdown (base + markup)
    - Provides delivery details
-   - System calculates final customer price
-   - Event: `order.customer_accepted`
+   - System calculates final buyer price
+   - Event: `order.buyer_accepted`
 
 4. **Preparation** (`preparing` → `ready`)
-   - Supplier starts preparing pizza
+   - Source starts preparing order
    - Marks as ready when complete
    - Events: `order.preparing`, `order.ready`
 
@@ -70,28 +70,28 @@ An event-driven platform built with React, FastAPI, and Redis Cloud. The system 
    - Event: `order.dispatched`, `order.in_transit`
 
 6. **Delivery** (`delivered`)
-   - Driver delivers to customer
+   - Driver delivers to buyer
    - Order marked as complete
    - Event: `order.delivered`
 
 ## Data Models
 
-### PizzaOrder
+### Order
 
 ```python
 {
     "id": "uuid",
-    "supplier_name": "string",
-    "pizza_name": "string",
-    "supplier_price": float,
-    "customer_price": float | null,
+    "source_name": "string",
+    "item_name": "string",
+    "source_price": float,
+    "buyer_price": float | null,
     "markup_percentage": float (default: 30.0),
     "status": OrderStatus,
-    "customer_name": "string" | null,
+    "buyer_name": "string" | null,
     "delivery_address": "string" | null,
     "driver_name": "string" | null,
     "estimated_delivery_time": int | null,  # minutes
-    "supplier_notes": "string" | null,
+    "source_notes": "string" | null,
     "created_at": datetime,
     "updated_at": datetime
 }
@@ -101,11 +101,11 @@ An event-driven platform built with React, FastAPI, and Redis Cloud. The system 
 
 | Status | Description |
 |--------|-------------|
-| `pending_supplier` | Awaiting supplier response |
-| `supplier_accepted` | Supplier confirmed availability |
-| `supplier_rejected` | Supplier declined order |
-| `customer_accepted` | Customer placed order with markup |
-| `preparing` | Pizza being prepared |
+| `pending_source` | Awaiting source response |
+| `source_accepted` | Source confirmed availability |
+| `source_rejected` | Source declined order |
+| `buyer_accepted` | Buyer placed order with markup |
+| `preparing` | Order being prepared |
 | `ready` | Ready for pickup |
 | `dispatched` | Driver assigned |
 | `in_transit` | Out for delivery |
@@ -122,21 +122,21 @@ POST /api/orders
 Content-Type: application/json
 
 {
-    "supplier_name": "Pizza Palace",
-    "pizza_name": "Margherita",
-    "supplier_price": 10.00,
+    "source_name": "Quick Mart",
+    "item_name": "Electronics Bundle",
+    "source_price": 10.00,
     "markup_percentage": 30
 }
 ```
 
-**Supplier Response**
+**Source Response**
 ```http
-POST /api/orders/{order_id}/supplier-respond?accept=true&notes=Fresh%20ingredients&estimated_time=30
+POST /api/orders/{order_id}/source-respond?accept=true&notes=Fresh%20ingredients&estimated_time=30
 ```
 
-**Customer Accept**
+**Buyer Accept**
 ```http
-POST /api/orders/{order_id}/customer-accept?customer_name=John%20Doe&delivery_address=123%20Main%20St
+POST /api/orders/{order_id}/buyer-accept?buyer_name=John%20Doe&delivery_address=123%20Main%20St
 ```
 
 **Dispatch Order**
@@ -196,9 +196,9 @@ GET /api/state?include_completed=true&limit=10
         "total_orders": 42,
         "active_deliveries": 5,
         "completed_today": 12,
-        "pending_supplier": 3,
-        "supplier_accepted": 2,
-        "customer_accepted": 1,
+        "pending_source": 3,
+         "source_accepted": 2,
+         "buyer_accepted": 1,
         "preparing": 2,
         "ready": 1,
         "dispatched": 3,
@@ -263,14 +263,14 @@ Content-Type: application/json
 
 ### Tracking IDs
 
-**Track Order by Customer Tracking ID**
+**Track Order by Buyer Tracking ID**
 ```http
 GET /api/track/{tracking_id}
 ```
 
-**Track Order by Supplier Tracking ID**
+**Track Order by Source Tracking ID**
 ```http
-GET /api/track/supplier/{supplier_tracking_id}
+GET /api/track/source/{source_tracking_id}
 ```
 
 ### Metrics (Grafana Integration)
@@ -295,8 +295,8 @@ ws://localhost:8000/ws
 **Event Format**
 ```json
 {
-    "event_type": "order.supplier_accepted",
-    "order": { /* PizzaOrder object */ },
+    "event_type": "order.source_accepted",
+    "order": { /* Order object */ },
     "timestamp": "2026-02-17T10:30:00Z"
 }
 ```
@@ -308,18 +308,18 @@ ws://localhost:8000/ws
 Orders stored as key-value pairs:
 ```
 Key: order:{uuid}
-Value: JSON serialized PizzaOrder
+Value: JSON serialized Order
 ```
 
 ### Pub/Sub Channel
 
-**Channel:** `pizza_orders`
+**Channel:** `orders`
 
 **Published Events:**
 - `order.created`
-- `order.supplier_accepted`
-- `order.supplier_rejected`
-- `order.customer_accepted`
+- `order.source_accepted`
+- `order.source_rejected`
+- `order.buyer_accepted`
 - `order.preparing`
 - `order.ready`
 - `order.dispatched`
@@ -344,7 +344,7 @@ REDIS_DB=0
 ```
 App.jsx
 ├── SupplierPanel.jsx      # Create orders, accept/reject
-├── CustomerPanel.jsx      # View and accept orders
+├── BuyerPanel.jsx      # View and accept orders
 ├── DispatchPanel.jsx      # Assign drivers
 ├── OrdersPanel.jsx        # View all orders with status updates
 ├── DeliveryTracker.jsx    # Real-time delivery tracking (Phase 4)
@@ -454,11 +454,11 @@ python inspect_redis.py
 
 ### Manual Testing Flow
 
-1. Open app in 3 browser windows (Supplier, Customer, Dispatch)
-2. **Supplier Window**: Create order
-3. **Supplier Window**: Accept order with notes
-4. **Customer Window**: Accept order with delivery details
-5. **Supplier Window**: Mark as preparing → ready
+1. Open app in 3 browser windows (Source, Buyer, Dispatch)
+2. **Source Window**: Create order
+3. **Source Window**: Accept order with notes
+4. **Buyer Window**: Accept order with delivery details
+5. **Source Window**: Mark as preparing → ready
 6. **Dispatch Window**: Assign driver → dispatch
 7. **Dispatch Window**: Mark in transit → delivered
 8. Verify real-time updates across all windows
@@ -486,7 +486,7 @@ event-driven-platform/
 │   │   ├── main.jsx            # Entry point
 │   │   ├── components/
 │   │   │   ├── SupplierPanel.jsx
-│   │   │   ├── CustomerPanel.jsx
+│   │   │   ├── BuyerPanel.jsx
 │   │   │   ├── DispatchPanel.jsx
 │   │   │   └── OrdersPanel.jsx
 │   │   └── hooks/
@@ -507,15 +507,15 @@ event-driven-platform/
 - Decoupled service architecture
 
 ### ✅ Multi-Role System
-- Supplier: Create and manage orders
-- Customer: Browse and purchase with markup
+- Source: Create and manage orders
+- Buyer: Browse and purchase with markup
 - Dispatch: Assign drivers and track delivery
 
 ### ✅ Order Management
 - Complete order lifecycle tracking
 - Status transitions with validation
-- Supplier acceptance/rejection workflow
-- Customer pricing with configurable markup
+- Source acceptance/rejection workflow
+- Buyer pricing with configurable markup
 
 ### ✅ Real-Time Updates
 - WebSocket connection with auto-reconnect
@@ -550,8 +550,8 @@ event-driven-platform/
 - Batch performance optimization
 
 ### ✅ Tracking IDs
-- Customer tracking IDs (8-digit)
-- Supplier tracking IDs (prefix-based)
+- Buyer tracking IDs (8-digit)
+- Source tracking IDs (prefix-based)
 - Public tracking endpoints
 - Unique ID generation
 
@@ -560,7 +560,7 @@ event-driven-platform/
 - JSON metrics API
 - Pre-built dashboards
 - Real-time delivery analytics
-- Supplier and driver performance metrics
+- Source and driver performance metrics
 
 ### ✅ Developer Tools
 - Connection testing utilities

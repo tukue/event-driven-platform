@@ -19,7 +19,7 @@ Phase 5 has been successfully completed! All 6 major tasks (20-25) with 24 subta
   - 📦 Total Orders (blue)
   - 🚚 Active Deliveries (orange)
   - ✅ Completed Today (green)
-  - ⏳ Pending Supplier (purple)
+  - ⏳ Pending Source (purple)
 - ✅ Icons and color-coding for each metric
 - ✅ Hover effects and animations
 
@@ -28,9 +28,9 @@ Phase 5 has been successfully completed! All 6 major tasks (20-25) with 24 subta
 - ✅ Order count badges on each section
 - ✅ Expandable order details showing:
   - Order ID
-  - Pizza name
-  - Supplier name
-  - Customer name (if accepted)
+  - Item name
+  - Source name
+  - Buyer name (if accepted)
   - Driver name (if dispatched)
   - Delivery address
 - ✅ Color-coded status indicators
@@ -88,11 +88,11 @@ SystemDashboard (Main)
 │   ├── StatCard (Total Orders)
 │   ├── StatCard (Active Deliveries)
 │   ├── StatCard (Completed Today)
-│   └── StatCard (Pending Supplier)
+│   └── StatCard (Pending Source)
 ├── Status Breakdown
 │   └── Status Items Grid
 ├── Orders by Status
-│   ├── StatusSection (Pending Supplier)
+│   ├── StatusSection (Pending Source)
 │   ├── StatusSection (Preparing)
 │   ├── StatusSection (Ready)
 │   ├── StatusSection (Dispatched)
@@ -147,14 +147,14 @@ npm run dev
 
 **Create Orders:**
 1. Switch to "🏪 Marketplace" view
-2. Create a new order in SupplierPanel
+2. Create a new order in SourcePanel
 3. Switch back to "📊 Dashboard"
 4. Watch statistics update automatically
 5. See notification toast appear
 
 **Progress Orders:**
-1. Accept order as supplier
-2. Accept order as customer
+1. Accept order as source
+2. Accept order as buyer
 3. Mark as preparing → ready
 4. Dispatch with driver
 5. Watch dashboard update in real-time
@@ -240,7 +240,7 @@ The dashboard integrates with:
     "total_orders": 10,
     "active_deliveries": 3,
     "completed_today": 2,
-    "pending_supplier": 1,
+    "pending_source": 1,
     "preparing": 2,
     "ready": 1,
     "dispatched": 2,
@@ -248,7 +248,7 @@ The dashboard integrates with:
     "delivered": 5
   },
   "orders_by_status": {
-    "pending_supplier": [...],
+    "pending_source": [...],
     "preparing": [...],
     "ready": [...],
     "dispatched": [...],

@@ -34,9 +34,9 @@
 ┌──────────────────────────┐  ┌──────────────────────────┐
 │  /metrics (Prometheus)   │  │  /api/metrics (JSON)     │
 │  ┌────────────────────┐  │  │  ┌────────────────────┐  │
-│  │ pizza_orders_total │  │  │  │ { "summary": {...} │  │
-│  │ pizza_delivered    │  │  │  │   "time_series": { │  │
-│  │ delivery_rate      │  │  │  │   "by_supplier": { │  │
+│  │ orders_total    │  │  │  │ { "summary": {...} │  │
+│  │ orders_delivered│  │  │  │   "time_series": { │  │
+│  │ delivery_rate   │  │  │  │   "by_source": {   │  │
 │  │ ...                │  │  │  │   ... }            │  │
 │  └────────────────────┘  │  │  └────────────────────┘  │
 └──────────────────────────┘  └──────────────────────────┘
@@ -145,7 +145,7 @@ Grafana → HTTP Request → Backend Endpoint → Parse Metrics → Render Dashb
 - Deliveries last 30 days
 
 ### Dimensional Metrics
-- Deliveries by supplier (labeled)
+- Deliveries by source (labeled)
 - Deliveries by driver (labeled)
 - Hourly distribution
 
@@ -221,7 +221,7 @@ Grafana → Prometheus Server → Backend API → Redis
 ### Planned Features
 1. **Additional Metrics**
    - Average delivery time
-   - Customer satisfaction scores
+   - Buyer satisfaction scores
    - Revenue metrics
    - Peak hour analysis
 

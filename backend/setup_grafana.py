@@ -31,7 +31,7 @@ async def main():
     """Interactive setup wizard"""
     print_header("🚀 Grafana Setup Wizard")
     print("\nThis wizard will guide you through setting up Grafana")
-    print("visualization for your pizza delivery system.")
+    print("visualization for your order delivery system.")
     
     # Step 1: Check prerequisites
     print_step(1, "Prerequisites Check")

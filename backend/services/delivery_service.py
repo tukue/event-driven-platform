@@ -1,4 +1,4 @@
-from models import PizzaOrder, OrderStatus
+from models import Order, OrderStatus
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -29,38 +29,34 @@ class DeliveryService:
         except ValueError:
             raise ValueError(f"Order {order_id} not found")
         
-        # Check if order has been dispatched
         if order.status not in [OrderStatus.DISPATCHED, OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED]:
             raise ValueError(f"Order {order_id} has not been dispatched yet")
         
-        # Calculate delivery progress
         progress = self.calculate_progress(order)
-        
-        # Estimate arrival time
         estimated_arrival = self.estimate_arrival(order)
         
         return {
             "order_id": order.id,
             "tracking_id": order.tracking_id,
-            "supplier_tracking_id": order.supplier_tracking_id,
+            "source_tracking_id": order.source_tracking_id,
             "status": order.status.value,
             "driver_name": order.driver_name,
             "delivery_address": order.delivery_address,
-            "customer_name": order.customer_name,
-            "supplier_name": order.supplier_name,
-            "pizza_name": order.pizza_name,
+            "buyer_name": order.buyer_name,
+            "source_name": order.source_name,
+            "item_name": order.item_name,
             "progress_percentage": progress,
             "estimated_arrival_minutes": estimated_arrival,
             "timeline": self._get_timeline(order),
             "current_stage": self._get_current_stage(order.status)
         }
     
-    def calculate_progress(self, order: PizzaOrder) -> int:
+    def calculate_progress(self, order: Order) -> int:
         """
         Calculate delivery progress as a percentage
         
         Args:
-            order: The pizza order
+            order: The order
             
         Returns:
             Progress percentage (0-100)
@@ -72,12 +68,12 @@ class DeliveryService:
         }
         return status_progress.get(order.status, 0)
     
-    def estimate_arrival(self, order: PizzaOrder) -> Optional[int]:
+    def estimate_arrival(self, order: Order) -> Optional[int]:
         """
         Estimate arrival time in minutes
         
         Args:
-            order: The pizza order
+            order: The order
             
         Returns:
             Estimated minutes until arrival, or None if delivered
@@ -85,19 +81,16 @@ class DeliveryService:
         if order.status == OrderStatus.DELIVERED:
             return 0
         
-        # Use estimated delivery time from order, or default
         base_time = order.estimated_delivery_time or 30
         
-        # Adjust based on current status
         if order.status == OrderStatus.DISPATCHED:
             return base_time
         elif order.status == OrderStatus.IN_TRANSIT:
-            # Assume halfway through delivery
             return base_time // 2
         
         return None
     
-    def _get_timeline(self, order: PizzaOrder) -> list:
+    def _get_timeline(self, order: Order) -> list:
         """Get delivery timeline with timestamps"""
         timeline = []
         

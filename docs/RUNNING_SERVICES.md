@@ -226,9 +226,9 @@ POST http://localhost:8000/api/orders
 Content-Type: application/json
 
 {
-  "supplier_name": "Pizza Palace",
-  "pizza_name": "Margherita",
-  "supplier_price": 10.00,
+  "source_name": "Quick Mart",
+  "item_name": "Electronics Bundle",
+  "source_price": 10.00,
   "markup_percentage": 30
 }
 ```
@@ -238,14 +238,14 @@ Content-Type: application/json
 GET http://localhost:8000/api/orders
 ```
 
-### Supplier Accept Order
+### Source Accept Order
 ```bash
-POST http://localhost:8000/api/orders/{order_id}/supplier-respond?accept=true&notes=Fresh%20ingredients&estimated_time=30
+POST http://localhost:8000/api/orders/{order_id}/source-respond?accept=true&notes=Fresh%20ingredients&estimated_time=30
 ```
 
-### Customer Accept Order
+### Buyer Accept Order
 ```bash
-POST http://localhost:8000/api/orders/{order_id}/customer-accept?customer_name=John%20Doe&delivery_address=123%20Main%20St
+POST http://localhost:8000/api/orders/{order_id}/buyer-accept?buyer_name=John%20Doe&delivery_address=123%20Main%20St
 ```
 
 ### Update Order Status
@@ -410,19 +410,19 @@ pytest tests/ -v
 
 ```bash
 # Build image
-docker build -t pizza-backend .
+docker build -t order-backend .
 
 # Run container
-docker run -p 8000:8000 --env-file .env pizza-backend
+docker run -p 8000:8000 --env-file .env order-backend
 ```
 
 ### Using Systemd (Linux)
 
-Create `/etc/systemd/system/pizza-backend.service`:
+Create `/etc/systemd/system/order-backend.service`:
 
 ```ini
 [Unit]
-Description=Pizza Delivery Backend
+Description=Order Delivery Backend
 After=network.target
 
 [Service]
@@ -438,9 +438,9 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-sudo systemctl enable pizza-backend
-sudo systemctl start pizza-backend
-sudo systemctl status pizza-backend
+sudo systemctl enable order-backend
+sudo systemctl start order-backend
+sudo systemctl status order-backend
 ```
 
 ### Using PM2 (Node.js Process Manager)
@@ -450,13 +450,13 @@ sudo systemctl status pizza-backend
 npm install -g pm2
 
 # Start backend
-pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name pizza-backend
+pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name order-backend
 
 # View logs
-pm2 logs pizza-backend
+pm2 logs order-backend
 
 # Restart
-pm2 restart pizza-backend
+pm2 restart order-backend
 ```
 
 ## Environment Variables Reference

@@ -1,7 +1,7 @@
 import asyncio
 from redis_client import redis_client
 from services.order_service import OrderService
-from models import PizzaOrder
+from models import Order
 
 async def test_order_creation():
     """Test creating an order and verifying it's saved to Redis"""
@@ -18,16 +18,16 @@ async def test_order_creation():
     order_service = OrderService(redis_client)
     
     # Create test order
-    test_order = PizzaOrder(
-        supplier_name="Test Pizza Shop",
-        pizza_name="Margherita",
-        supplier_price=12.50,
+    test_order = Order(
+        source_name="Test Quick Mart",
+        item_name="Electronics Bundle",
+        source_price=12.50,
         markup_percentage=30.0
     )
     
-    print(f"Creating order: {test_order.pizza_name}")
-    print(f"Supplier: {test_order.supplier_name}")
-    print(f"Price: ${test_order.supplier_price}")
+    print(f"Creating order: {test_order.item_name}")
+    print(f"Source: {test_order.source_name}")
+    print(f"Price: ${test_order.source_price}")
     print(f"Markup: {test_order.markup_percentage}%\n")
     
     # Create the order
@@ -57,7 +57,7 @@ async def test_order_creation():
     
     # Display all orders
     for i, order in enumerate(all_orders, 1):
-        print(f"{i}. {order['pizza_name']} - ${order['supplier_price']} ({order['status']})")
+        print(f"{i}. {order['item_name']} - ${order['source_price']} ({order['status']})")
     
     print("\n" + "=" * 60)
     print("Test completed successfully!")

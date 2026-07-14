@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from redis_client import redis_client
 from services.stream_consumer import StreamConsumer
-from models import PizzaOrder, OrderEvent, OrderStatus
+from models import Order, OrderEvent, OrderStatus
 
 async def test_stream_operations():
     """Test basic stream operations"""
@@ -23,10 +23,10 @@ async def test_stream_operations():
         print("\nTest 1: Publishing events to stream")
 
         # Create a sample order
-        order = PizzaOrder(
-            supplier_name="Test Pizza Co",
-            pizza_name="Margherita Pizza",
-            supplier_price=15.99,
+        order = Order(
+            source_name="Test Quick Mart",
+            item_name="Electronics Bundle",
+            source_price=15.99,
             markup_percentage=30.0
         )
         order.id = order.id or str(uuid.uuid4())
@@ -44,12 +44,12 @@ async def test_stream_operations():
                 }, default=str)
             },
             {
-                "event_type": "order.supplier_accepted",
+                "event_type": "order.source_accepted",
                 "order_id": order.id,
                 "timestamp": datetime.utcnow().isoformat(),
                 "data": json.dumps({
-                    "event_type": "order.supplier_accepted",
-                    "order": {**order.model_dump(mode='json'), "status": "supplier_accepted"},
+                    "event_type": "order.source_accepted",
+                    "order": {**order.model_dump(mode='json'), "status": "source_accepted"},
                     "timestamp": datetime.utcnow().isoformat()
                 }, default=str)
             }
@@ -107,7 +107,7 @@ async def test_stream_operations():
             print(f"Handler called for event: {event_data.get('event_type')}")
 
         consumer.register_handler("order.created", test_handler)
-        consumer.register_handler("order.supplier_accepted", test_handler)
+        consumer.register_handler("order.source_accepted", test_handler)
 
         # Add one more event to test consumer
         test_event = {
@@ -116,7 +116,7 @@ async def test_stream_operations():
             "timestamp": datetime.utcnow().isoformat(),
             "data": json.dumps({
                 "event_type": "order.created",
-                "order": {"id": "test-order-123", "pizza_name": "Test Pizza"},
+                "order": {"id": "test-order-123", "item_name": "Test Item"},
                 "timestamp": datetime.utcnow().isoformat()
             }, default=str)
         }

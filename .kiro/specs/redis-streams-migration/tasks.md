@@ -7,7 +7,7 @@ Add Redis Streams as a parallel, persistent event log alongside the existing Pub
 ## Tasks
 
 - [ ] 1. Add configuration and constants
-  - Add `STREAM_NAME = "pizza_orders_stream"` and `GROUP_NAME = "pizza_consumers"` as module-level constants in `backend/redis_client.py`
+  - Add `STREAM_NAME = "orders_stream"` and `GROUP_NAME = "event_processors"` as module-level constants in `backend/redis_client.py`
   - Add `stream_max_len: int = Field(default=10000, env="STREAM_MAX_LEN")` to the `Settings` class in `backend/config.py`
   - _Requirements: 2.5, 4.1_
 
@@ -107,7 +107,7 @@ Add Redis Streams as a parallel, persistent event log alongside the existing Pub
     - **Validates: Requirements 6.1, 8.1**
 
   - [ ]* 7.5 Property 5 — Consumer group creation is idempotent
-    - `test_prop_consumer_group_idempotent`: use `st.integers(min_value=1, max_value=10)` for call count; call `_ensure_consumer_group` N times, assert no error and exactly one group named `pizza_consumers` exists
+    - `test_prop_consumer_group_idempotent`: use `st.integers(min_value=1, max_value=10)` for call count; call `_ensure_consumer_group` N times, assert no error and exactly one group named `event_processors` exists
     - **Property 5: Consumer group creation is idempotent**
     - **Validates: Requirements 4.1, 4.3**
 

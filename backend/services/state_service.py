@@ -80,7 +80,7 @@ class StateService:
             total_orders=len(orders),
             active_deliveries=active_deliveries,
             completed_today=completed_today,
-            pending_supplier=status_counts.get('pending_supplier', 0),
+            pending_source=status_counts.get('pending_source', 0),
             preparing=status_counts.get('preparing', 0),
             ready=status_counts.get('ready', 0),
             dispatched=status_counts.get('dispatched', 0),

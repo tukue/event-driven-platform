@@ -7,7 +7,7 @@ import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
-from models import PizzaOrder, OrderStatus, OrderEvent
+from models import Order, OrderStatus, OrderEvent
 from services.order_service import OrderService
 
 
@@ -35,13 +35,13 @@ def kafka_service(mock_kafka_producer):
 
 @pytest.fixture
 def sample_event():
-    order = PizzaOrder(
+    order = Order(
         id="test-123",
-        pizza_name="Margherita",
-        supplier_name="Pizza Palace",
-        supplier_price=10.0,
-        status=OrderStatus.PENDING_SUPPLIER,
-        tracking_id="PIZZA-2026-000001",
+        item_name="Test Item",
+        source_name="Quick Mart",
+        source_price=10.0,
+        status=OrderStatus.PENDING_SOURCE,
+        tracking_id="ORD-2026-000001",
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -54,10 +54,10 @@ def sample_event():
 
 @pytest.fixture
 def blank_order():
-    return PizzaOrder(
-        supplier_name="Test Pizza Co",
-        pizza_name="Margherita",
-        supplier_price=15.99,
+    return Order(
+        source_name="Test Source Co",
+        item_name="Test Item",
+        source_price=15.99,
         markup_percentage=30.0,
     )
 
@@ -89,7 +89,7 @@ async def test_kafka_service_publish_event(kafka_service, sample_event):
 
     kafka_service.producer.send.assert_awaited_once()
     call_args = kafka_service.producer.send.call_args
-    assert call_args.kwargs["topic"] == "pizza.orders"
+    assert call_args.kwargs["topic"] == "orders"
     assert call_args.kwargs["key"] == "test-123"
     assert call_args.kwargs["value"]["event_type"] == "order.created"
 
@@ -174,7 +174,7 @@ async def test_order_service_publishes_to_kafka(mock_redis, sample_event, mock_k
 
     kafka.producer.send.assert_awaited_once()
     call_args = kafka.producer.send.call_args
-    assert call_args.kwargs["topic"] == "pizza.orders"
+    assert call_args.kwargs["topic"] == "orders"
     assert call_args.kwargs["value"]["event_type"] == "order.created"
 
 
@@ -200,8 +200,8 @@ async def test_order_service_full_lifecycle_publishes_to_kafka(mock_redis, blank
     event1 = await service.create_order(blank_order)
     order_id = event1.order.id
 
-    event2 = await service.supplier_respond(order_id, accept=True, estimated_time=30)
-    event3 = await service.customer_accept(order_id, "Jane", "456 Oak St")
+    event2 = await service.source_respond(order_id, accept=True, estimated_time=30)
+    event3 = await service.buyer_accept(order_id, "Jane", "456 Oak St")
     event4 = await service.dispatch_order(order_id, "Driver Dave")
     event5 = await service.update_status(order_id, OrderStatus.IN_TRANSIT)
     event6 = await service.update_status(order_id, OrderStatus.DELIVERED)
@@ -211,15 +211,15 @@ async def test_order_service_full_lifecycle_publishes_to_kafka(mock_redis, blank
     sent_types = [call.kwargs["value"]["event_type"] for call in kafka.producer.send.call_args_list]
     assert sent_types == [
         "order.created",
-        "order.supplier_accepted",
-        "order.customer_accepted",
+        "order.source_accepted",
+        "order.buyer_accepted",
         "order.dispatched",
         "order.in_transit",
         "order.delivered",
     ]
 
     for call in kafka.producer.send.call_args_list:
-        assert call.kwargs["topic"] == "pizza.orders"
+        assert call.kwargs["topic"] == "orders"
         assert call.kwargs["key"] == order_id
 
 
@@ -266,7 +266,7 @@ async def test_order_service_batch_publishes_to_kafka(mock_redis, mock_kafka_pro
     assert kafka.producer.send.await_count == 2
 
     for call in kafka.producer.send.call_args_list:
-        assert call.kwargs["topic"] == "pizza.orders"
+        assert call.kwargs["topic"] == "orders"
 
 
 @pytest.mark.asyncio
@@ -502,7 +502,7 @@ async def test_websocket_bridge_consumer_configuration():
 
         from services.kafka_service import WebSocketBridge
 
-        bridge = WebSocketBridge("localhost:9092", topic="pizza.orders")
+        bridge = WebSocketBridge("localhost:9092", topic="orders")
         await bridge.start()
 
         mock_consumer_cls.assert_called_once()
@@ -511,7 +511,7 @@ async def test_websocket_bridge_consumer_configuration():
         assert call_kwargs["auto_offset_reset"] == "latest"
         assert call_kwargs["enable_auto_commit"] is True
         assert "localhost:9092" in call_kwargs["bootstrap_servers"]
-        assert "pizza.orders" in call_kwargs["bootstrap_servers"] or "pizza.orders" in mock_consumer_cls.call_args.args
+        assert "orders" in call_kwargs["bootstrap_servers"] or "orders" in mock_consumer_cls.call_args.args
 
         await bridge.stop()
 

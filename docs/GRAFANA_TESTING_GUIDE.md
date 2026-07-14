@@ -107,11 +107,11 @@ Expected output:
    📊 Response contains 50+ lines
 
    Sample metrics:
-      pizza_orders_total 76
-      pizza_orders_delivered 50
-      pizza_orders_in_transit 5
-      pizza_orders_dispatched 3
-      pizza_delivery_rate_percent 65.79
+orders_total 76
+orders_delivered 50
+orders_in_transit 5
+orders_dispatched 3
+delivery_rate_percent 65.79
 
 2️⃣  Testing JSON API endpoint (/api/metrics)...
    ✅ JSON API endpoint is working
@@ -127,10 +127,10 @@ Expected output:
       Last 7 Days: 12
       Last 30 Days: 50
 
-   🏪 Top Suppliers:
-      Pizza Palace: 12 deliveries
-      Mama Mia's: 10 deliveries
-      Slice Heaven: 9 deliveries
+   🏪 Top Sources:
+      Quick Mart: 12 deliveries
+      Fresh Foods: 10 deliveries
+      Speed Supplies: 9 deliveries
 
    🚗 Top Drivers:
       Maria Garcia: 11 deliveries
@@ -149,13 +149,13 @@ Open in browser: http://localhost:8000/metrics
 
 You should see:
 ```
-# HELP pizza_orders_total Total number of pizza orders
-# TYPE pizza_orders_total counter
-pizza_orders_total 76
+# HELP orders_total Total number of orders
+# TYPE orders_total counter
+orders_total 76
 
-# HELP pizza_orders_delivered Total number of delivered orders
-# TYPE pizza_orders_delivered counter
-pizza_orders_delivered 50
+# HELP orders_delivered Total number of delivered orders
+# TYPE orders_delivered counter
+orders_delivered 50
 ...
 ```
 
@@ -174,7 +174,7 @@ You should see JSON response with:
     "delivery_rate": 65.79
   },
   "time_series": { ... },
-  "by_supplier": { ... },
+  "by_source": { ... },
   "by_driver": { ... }
 }
 ```
@@ -202,7 +202,7 @@ Access: http://localhost:3000 (admin/admin)
 3. Click **Add data source**
 4. Select **Prometheus**
 5. Configure:
-   - **Name**: `Pizza Delivery Metrics`
+    - **Name**: `Order Delivery Metrics`
    - **URL**: `http://host.docker.internal:8000/metrics` (Docker) or `http://localhost:8000/metrics` (local)
    - **Access**: Browser
 6. Click **Save & Test**
@@ -214,7 +214,7 @@ Expected: ✅ "Data source is working"
 1. Go to **Dashboards** → **Import**
 2. Click **Upload JSON file**
 3. Select `grafana/dashboard-orders-delivered.json`
-4. Select datasource: `Pizza Delivery Metrics`
+4. Select datasource: `Order Delivery Metrics`
 5. Click **Import**
 
 ### Step 10: Verify Dashboard
@@ -226,7 +226,7 @@ You should see 7 panels with data:
 3. ✅ **Orders In Transit**: Shows 5
 4. ✅ **Orders Dispatched**: Shows 3
 5. ✅ **Deliveries Over Time**: Line graph with data
-6. ✅ **Deliveries by Supplier**: Pie chart with 5 suppliers
+6. ✅ **Deliveries by Source**: Pie chart with 5 sources
 7. ✅ **Deliveries by Driver**: Bar chart with 5 drivers
 
 ### Step 11: Test Real-Time Updates
@@ -238,9 +238,9 @@ You should see 7 panels with data:
 curl -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
   -d '{
-    "supplier_name": "Pizza Palace",
-    "pizza_name": "Margherita",
-    "supplier_price": 12.50
+    "source_name": "Quick Mart",
+    "item_name": "Electronics Bundle",
+    "source_price": 12.50
   }'
 ```
 
@@ -284,7 +284,7 @@ curl -X POST http://localhost:8000/api/orders \
 **Solution:**
 1. Refresh metrics endpoint
 2. Check backend logs for errors in metrics_service.py
-3. Verify all orders have required fields (driver_name, supplier_name, etc.)
+3. Verify all orders have required fields (driver_name, source_name, etc.)
 
 ## Testing Checklist
 

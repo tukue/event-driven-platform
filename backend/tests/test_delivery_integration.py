@@ -17,24 +17,24 @@ async def test_delivery_tracking_dispatched_order(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 12.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 12.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    # Accept by supplier
+    # Accept by source
     await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={"accept": True, "estimated_time": 30}
     )
     
-    # Accept by customer
+    # Accept by buyer
     await client.post(
-        f"/api/orders/{order_id}/customer-accept",
-        params={"customer_name": "John Doe", "delivery_address": "123 Main St"}
+        f"/api/orders/{order_id}/buyer-accept",
+        params={"buyer_name": "John Doe", "delivery_address": "123 Main St"}
     )
     
     # Mark as ready
@@ -57,7 +57,7 @@ async def test_delivery_tracking_dispatched_order(client):
     assert data["status"] == "dispatched"
     assert data["driver_name"] == "Mike Driver"
     assert data["delivery_address"] == "123 Main St"
-    assert data["customer_name"] == "John Doe"
+    assert data["buyer_name"] == "John Doe"
     assert "progress_percentage" in data
     assert "estimated_arrival_minutes" in data
     assert "timeline" in data
@@ -78,17 +78,17 @@ async def test_delivery_tracking_in_transit_order(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Pepperoni",
-            "supplier_price": 15.0,
+            "source_name": "Test Source",
+            "item_name": "Kitchen Set",
+            "source_price": 15.0,
             "markup_percentage": 25.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
     # Process through workflow
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True, "estimated_time": 40})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "Jane Smith", "delivery_address": "456 Oak Ave"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True, "estimated_time": 40})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "Jane Smith", "delivery_address": "456 Oak Ave"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
     await client.post(f"/api/orders/{order_id}/dispatch", params={"driver_name": "Sarah Driver"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "in_transit"})
@@ -115,17 +115,17 @@ async def test_delivery_tracking_delivered_order(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Hawaiian",
-            "supplier_price": 14.0,
+            "source_name": "Test Source",
+            "item_name": "Book Collection",
+            "source_price": 14.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
     # Process through complete workflow
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "Bob Johnson", "delivery_address": "789 Pine St"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "Bob Johnson", "delivery_address": "789 Pine St"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
     await client.post(f"/api/orders/{order_id}/dispatch", params={"driver_name": "Tom Driver"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "in_transit"})
@@ -167,9 +167,9 @@ async def test_delivery_tracking_order_not_dispatched(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Veggie",
-            "supplier_price": 11.0,
+            "source_name": "Test Source",
+            "item_name": "Fitness Kit",
+            "source_price": 11.0,
             "markup_percentage": 30.0
         }
     )
@@ -192,16 +192,16 @@ async def test_delivery_tracking_timeline(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Supreme",
-            "supplier_price": 16.0,
+            "source_name": "Test Source",
+            "item_name": "Garden Tools",
+            "source_price": 16.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "Alice Brown", "delivery_address": "321 Elm St"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "Alice Brown", "delivery_address": "321 Elm St"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
     await client.post(f"/api/orders/{order_id}/dispatch", params={"driver_name": "Chris Driver"})
     
@@ -241,9 +241,9 @@ async def test_delivery_tracking_multiple_orders_concurrent(client):
         create_response = await client.post(
             "/api/orders",
             json={
-                "supplier_name": f"Pizza Place {i}",
-                "pizza_name": f"Pizza {i}",
-                "supplier_price": 10.0 + i,
+                "source_name": f"Source Place {i}",
+                "item_name": f"Item {i}",
+                "source_price": 10.0 + i,
                 "markup_percentage": 30.0
             }
         )
@@ -251,8 +251,8 @@ async def test_delivery_tracking_multiple_orders_concurrent(client):
         order_ids.append(order_id)
         
         # Process each order
-        await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-        await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": f"Customer {i}", "delivery_address": f"{i} Street"})
+        await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+        await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": f"Buyer {i}", "delivery_address": f"{i} Street"})
         await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
         await client.post(f"/api/orders/{order_id}/dispatch", params={"driver_name": f"Driver {i}"})
     
@@ -268,7 +268,7 @@ async def test_delivery_tracking_multiple_orders_concurrent(client):
         data = response.json()
         assert data["order_id"] == order_ids[i]
         assert data["driver_name"] == f"Driver {i}"
-        assert data["customer_name"] == f"Customer {i}"
+        assert data["buyer_name"] == f"Buyer {i}"
 
 
 @pytest.mark.asyncio
@@ -281,17 +281,17 @@ async def test_delivery_tracking_state_transitions(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Quattro Formaggi",
-            "supplier_price": 18.0,
+            "source_name": "Test Source",
+            "item_name": "Workflow Item",
+            "source_price": 18.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
     # Process to dispatch
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True, "estimated_time": 45})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "Test User", "delivery_address": "Test Address"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True, "estimated_time": 45})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "Test User", "delivery_address": "Test Address"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
     await client.post(f"/api/orders/{order_id}/dispatch", params={"driver_name": "Test Driver"})
     
@@ -335,16 +335,16 @@ async def test_delivery_tracking_edge_cases(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Test",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "Test", "delivery_address": "Test"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "Test", "delivery_address": "Test"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "preparing"})
     
     response = await client.get(f"/api/orders/{order_id}/delivery")
@@ -369,16 +369,16 @@ async def test_delivery_tracking_performance(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Performance Test",
-            "supplier_price": 12.0,
+            "source_name": "Test Source",
+            "item_name": "Performance Test",
+            "source_price": 12.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "Test", "delivery_address": "Test"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "Test", "delivery_address": "Test"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
     await client.post(f"/api/orders/{order_id}/dispatch", params={"driver_name": "Test Driver"})
     

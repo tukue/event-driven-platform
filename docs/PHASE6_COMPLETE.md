@@ -182,8 +182,8 @@ Phase 6 focused on comprehensive testing, documentation updates, and code review
 1. `GET /api/orders/{order_id}/delivery` - Delivery tracking
 2. `GET /api/state` - System state
 3. `POST /api/events/batch` - Event batching
-4. `GET /api/track/{tracking_id}` - Customer tracking
-5. `GET /api/track/supplier/{supplier_tracking_id}` - Supplier tracking
+4. `GET /api/track/{tracking_id}` - Buyer tracking
+5. `GET /api/track/source/{source_tracking_id}` - Source tracking
 6. `GET /metrics` - Prometheus metrics
 7. `GET /api/metrics` - JSON metrics
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature adds Redis Streams as a parallel, persistent event log alongside the existing Redis Pub/Sub infrastructure in the pizza delivery marketplace backend. The change is purely additive: no existing code paths are removed or altered. Every order lifecycle event will be dual-written — published on the `pizza_orders` Pub/Sub channel (as today) and appended to the `pizza_orders_stream` Redis Stream. The WebSocket bridge gains an optional `last_event_id` query parameter that triggers a replay of missed events before resuming live Pub/Sub delivery.
+This feature adds Redis Streams as a parallel, persistent event log alongside the existing Redis Pub/Sub infrastructure in the order delivery platform backend. The change is purely additive: no existing code paths are removed or altered. Every order lifecycle event will be dual-written — published on the `orders` Pub/Sub channel (as today) and appended to the `orders_stream` Redis Stream. The WebSocket bridge gains an optional `last_event_id` query parameter that triggers a replay of missed events before resuming live Pub/Sub delivery.
 
 The stack is FastAPI + Python with `redis.asyncio`.
 
@@ -15,8 +15,8 @@ graph TD
     subgraph "Write Path (unchanged + new)"
         OS[OrderService._publish_event] -->|publish - unchanged| RC_PUB[RedisClient.publish]
         OS -->|xadd - NEW| RC_XADD[RedisClient.xadd]
-        RC_PUB -->|PUBLISH pizza_orders| REDIS[(Redis)]
-        RC_XADD -->|XADD pizza_orders_stream| REDIS
+        RC_PUB -->|PUBLISH orders| REDIS[(Redis)]
+        RC_XADD -->|XADD orders_stream| REDIS
     end
 
     subgraph "Read Path"
@@ -76,7 +76,7 @@ Startup addition in `connect()`:
 
 ```python
 async def _ensure_consumer_group(self):
-    """Create pizza_consumers group on pizza_orders_stream if not present."""
+    """Create event_processors group on orders_stream if not present."""
     try:
         await self.client.xgroup_create(
             STREAM_NAME, GROUP_NAME, id="$", mkstream=True
@@ -89,8 +89,8 @@ async def _ensure_consumer_group(self):
 Constants (module-level in `redis_client.py`):
 
 ```python
-STREAM_NAME = "pizza_orders_stream"
-GROUP_NAME  = "pizza_consumers"
+STREAM_NAME = "orders_stream"
+GROUP_NAME  = "event_processors"
 ```
 
 ### OrderService (services/order_service.py)
@@ -101,7 +101,7 @@ GROUP_NAME  = "pizza_consumers"
 async def _publish_event(self, event: OrderEvent):
     payload = json.dumps(event.model_dump(mode='json'), default=str)
     # Existing Pub/Sub — unchanged
-    await self.redis.publish("pizza_orders", payload)
+    await self.redis.publish("orders", payload)
     # New: persist to stream, non-blocking on failure
     try:
         await self.redis.xadd(STREAM_NAME, payload)
@@ -195,7 +195,7 @@ stream_max_len: int = Field(default=10000, env="STREAM_MAX_LEN")
 
 ### Property 5: Consumer group creation is idempotent
 
-*For any* number of calls to `_ensure_consumer_group`, the result should be that exactly one consumer group named `pizza_consumers` exists on `pizza_orders_stream` and no error is raised.
+*For any* number of calls to `_ensure_consumer_group`, the result should be that exactly one consumer group named `event_processors` exists on `orders_stream` and no error is raised.
 
 **Validates: Requirements 4.1, 4.3**
 

@@ -39,14 +39,14 @@ async def inspect_redis_data():
                 
                 print(f"{'='*60}")
                 print(f"Order ID: {order['id']}")
-                print(f"Pizza: {order['pizza_name']}")
-                print(f"Supplier: {order['supplier_name']}")
+                print(f"Item: {order['item_name']}")
+                print(f"Source: {order['source_name']}")
                 print(f"Status: {order['status']}")
-                print(f"Supplier Price: ${order['supplier_price']}")
-                if order.get('customer_price'):
-                    print(f"Customer Price: ${order['customer_price']}")
-                if order.get('customer_name'):
-                    print(f"Customer: {order['customer_name']}")
+                print(f"Source Price: ${order['source_price']}")
+                if order.get('buyer_price'):
+                    print(f"Buyer Price: ${order['buyer_price']}")
+                if order.get('buyer_name'):
+                    print(f"Buyer: {order['buyer_name']}")
                     print(f"Address: {order['delivery_address']}")
                 if order.get('driver_name'):
                     print(f"Driver: {order['driver_name']}")

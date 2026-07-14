@@ -40,8 +40,8 @@
 - ✅ `GET /api/state?include_completed=false` - Filtering
 - ✅ `GET /api/state?limit=2` - Pagination
 - ✅ `POST /api/orders` - Order creation
-- ✅ `POST /api/orders/{id}/supplier-respond` - Supplier acceptance
-- ✅ `POST /api/orders/{id}/customer-accept` - Customer acceptance
+- ✅ `POST /api/orders/{id}/source-respond` - Source acceptance
+- ✅ `POST /api/orders/{id}/buyer-accept` - Buyer acceptance
 - ✅ `POST /api/orders/{id}/status` - Status updates
 - ✅ `POST /api/orders/{id}/dispatch` - Driver dispatch
 

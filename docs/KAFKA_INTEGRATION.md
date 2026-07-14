@@ -1,6 +1,6 @@
 # Kafka / Redpanda Integration — Hands-On Experience
 
-This document provides a **practical, step-by-step experience** for the Kafka integration in the event-driven pizza delivery platform. Every section is designed to be executed live — copy the commands, run them, and observe the results.
+This document provides a **practical, step-by-step experience** for the Kafka integration in the event-driven order delivery platform. Every section is designed to be executed live — copy the commands, run them, and observe the results.
 
 ---
 
@@ -75,13 +75,13 @@ event-driven-platform-frontend-1    Up  ...    0.0.0.0:5173->5173/tcp
 ### 1.4 Create the Kafka Topic
 
 ```bash
-docker compose exec redpanda rpk topic create pizza.orders --partitions 3
+docker compose exec redpanda rpk topic create orders --partitions 3
 ```
 
 Expected output:
 ```
 TOPIC        STATUS
-pizza.orders  OK
+orders  OK
 ```
 
 ### 1.5 Verify the Backend Is Healthy
@@ -109,7 +109,7 @@ Expected output:
 Open a new terminal and run:
 
 ```bash
-docker compose exec redpanda rpk topic consume pizza.orders --num 1
+docker compose exec redpanda rpk topic consume orders --num 1
 ```
 
 This command waits for 1 event and prints it. It will block until an event arrives.
@@ -122,9 +122,9 @@ Open another terminal and run:
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
   -d '{
-    "supplier_name": "Pizza Palace",
-    "pizza_name": "Margherita",
-    "supplier_price": 10.0,
+    "source_name": "Quick Mart",
+    "item_name": "Electronics Bundle",
+    "source_price": 10.0,
     "markup_percentage": 30.0
   }' | python3 -m json.tool
 ```
@@ -135,13 +135,13 @@ Expected output:
     "event_type": "order.created",
     "order": {
         "id": "a1b2c3d4-...",
-        "tracking_id": "PIZZA-2026-123456",
-        "supplier_name": "Pizza Palace",
-        "pizza_name": "Margherita",
-        "supplier_price": 10.0,
-        "customer_price": 13.0,
+        "tracking_id": "ORD-2026-123456",
+        "source_name": "Quick Mart",
+        "item_name": "Electronics Bundle",
+        "source_price": 10.0,
+        "buyer_price": 13.0,
         "markup_percentage": 30.0,
-        "status": "pending_supplier",
+        "status": "pending_source",
         ...
     },
     "timestamp": "2026-07-13T12:00:00.000000"
@@ -154,15 +154,15 @@ The consumer should now show the event:
 
 ```json
 {
-    "topic": "pizza.orders",
+    "topic": "orders",
     "key": "a1b2c3d4-...",
     "value": {
         "event_type": "order.created",
         "order": {
             "id": "a1b2c3d4-...",
-            "tracking_id": "PIZZA-2026-123456",
-            "supplier_name": "Pizza Palace",
-            "pizza_name": "Margherita",
+            "tracking_id": "ORD-2026-123456",
+            "source_name": "Quick Mart",
+            "item_name": "Electronics Bundle",
             ...
         },
         "timestamp": "2026-07-13T12:00:00.000000"
@@ -182,10 +182,10 @@ Create another order and check which partition it lands on:
 # Terminal 2: Create another order
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Pepperoni","supplier_price":12.0,"markup_percentage":25.0}' > /dev/null
+  -d '{"source_name":"Quick Mart","item_name":"Kitchen Set","source_price":12.0,"markup_percentage":25.0}' > /dev/null
 
 # Terminal 1: Consume next event
-docker compose exec redpanda rpk topic consume pizza.orders --num 1
+docker compose exec redpanda rpk topic consume orders --num 1
 ```
 
 Note the `partition` field — it may be 0, 1, or 2 depending on the order ID hash. All events for the SAME order always go to the SAME partition.
@@ -220,10 +220,10 @@ Expected output:
 ```json
 {
     "id": "a1b2c3d4-...",
-    "tracking_id": "PIZZA-2026-123456",
-    "supplier_name": "Pizza Palace",
-    "pizza_name": "Margherita",
-    "status": "pending_supplier",
+    "tracking_id": "ORD-2026-123456",
+    "source_name": "Quick Mart",
+    "item_name": "Electronics Bundle",
+    "status": "pending_source",
     ...
 }
 ```
@@ -232,7 +232,7 @@ Expected output:
 
 ```bash
 # Count total events in stream
-docker compose exec redis redis-cli XLEN pizza_orders_stream
+docker compose exec redis redis-cli XLEN orders_stream
 ```
 
 Expected output:
@@ -244,19 +244,19 @@ Expected output:
 
 ```bash
 # Read last 5 events
-docker compose exec redis redis-cli XRANGE pizza_orders_stream - + COUNT 5
+docker compose exec redis redis-cli XRANGE orders_stream - + COUNT 5
 ```
 
 ### 3.5 Check Kafka (Scalable Backbone)
 
 ```bash
 # Describe topic
-docker compose exec redpanda rpk topic describe pizza.orders
+docker compose exec redpanda rpk topic describe orders
 ```
 
 Expected output:
 ```
-pizza.orders
+orders
   Partitions: 3
   Replicas: 1
   ...
@@ -269,10 +269,10 @@ pizza.orders
 echo "Redis orders: $(docker compose exec redis redis-cli KEYS 'order:*' | wc -l)"
 
 # Redis Stream count
-echo "Redis events: $(docker compose exec redis redis-cli XLEN pizza_orders_stream)"
+echo "Redis events: $(docker compose exec redis redis-cli XLEN orders_stream)"
 
 # Kafka messages
-echo "Kafka events: $(docker compose exec redpanda rpk topic describe pizza.orders | grep -o 'offset.*' | head -1)"
+echo "Kafka events: $(docker compose exec redpanda rpk topic describe orders | grep -o 'offset.*' | head -1)"
 ```
 
 **Checkpoint:** Same events exist in Redis KV, Redis Streams, and Kafka. This is the dual-write pattern in action.
@@ -313,12 +313,12 @@ WebSocket connected
 # Terminal: Create an order
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Hawaiian","supplier_price":14.0,"markup_percentage":20.0}' > /dev/null
+  -d '{"source_name":"Quick Mart","item_name":"Book Collection","source_price":14.0,"markup_percentage":20.0}' > /dev/null
 ```
 
 Check the browser console — you should see:
 ```
-Kafka event received: order.created PIZZA-2026-789012
+Kafka event received: order.created ORD-2026-789012
 ```
 
 ### 4.4 Verify It Came Through Kafka (Not Just Redis)
@@ -350,7 +350,7 @@ Walk through all 6 state transitions and watch each one appear in Kafka.
 
 ```bash
 # Terminal 1: Watch all events
-docker compose exec redpanda rpk topic consume pizza.orders
+docker compose exec redpanda rpk topic consume orders
 ```
 
 ### 5.2 Create an Order
@@ -358,7 +358,7 @@ docker compose exec redpanda rpk topic consume pizza.orders
 ```bash
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Margherita","supplier_price":10.0,"markup_percentage":30.0}'
+  -d '{"source_name":"Quick Mart","item_name":"Electronics Bundle","source_price":10.0,"markup_percentage":30.0}'
 ```
 
 Save the order ID from the response. You'll need it for the next commands.
@@ -368,24 +368,24 @@ Save the order ID from the response. You'll need it for the next commands.
 ORDER_ID="your-order-id-here"
 ```
 
-### 5.3 Supplier Accepts
+### 5.3 Source Accepts
 
 ```bash
-curl -s -X POST "http://localhost:8000/api/orders/${ORDER_ID}/supplier-respond?accept=true&notes=Fresh+out+of+oven&estimated_time=25" \
+curl -s -X POST "http://localhost:8000/api/orders/${ORDER_ID}/source-respond?accept=true&notes=Fresh+out+of+oven&estimated_time=25" \
   -H "Content-Type: application/json"
 ```
 
-Kafka consumer shows: `order.supplier_accepted`
+Kafka consumer shows: `order.source_accepted`
 
-### 5.4 Customer Accepts
+### 5.4 Buyer Accepts
 
 ```bash
-curl -s -X POST "http://localhost:8000/api/orders/${ORDER_ID}/customer-accept" \
+curl -s -X POST "http://localhost:8000/api/orders/${ORDER_ID}/buyer-accept" \
   -H "Content-Type: application/json" \
-  -d '{"customer_name":"Jane Doe","delivery_address":"456 Oak St"}'
+  -d '{"buyer_name":"Jane Doe","delivery_address":"456 Oak St"}'
 ```
 
-Kafka consumer shows: `order.customer_accepted`
+Kafka consumer shows: `order.buyer_accepted`
 
 ### 5.5 Dispatch Driver
 
@@ -419,8 +419,8 @@ You should have seen 6 events in the Kafka consumer:
 
 ```
 1. order.created          → partition 0, offset 3
-2. order.supplier_accepted → partition 0, offset 4
-3. order.customer_accepted → partition 0, offset 5
+2. order.source_accepted → partition 0, offset 4
+3. order.buyer_accepted → partition 0, offset 5
 4. order.dispatched        → partition 0, offset 6
 5. order.in_transit        → partition 0, offset 7
 6. order.delivered         → partition 0, offset 8
@@ -449,7 +449,7 @@ docker compose stop redpanda
 # Terminal 2: Create an order — still works!
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Pepperoni","supplier_price":12.0,"markup_percentage":25.0}' | python3 -m json.tool
+  -d '{"source_name":"Quick Mart","item_name":"Kitchen Set","source_price":12.0,"markup_percentage":25.0}' | python3 -m json.tool
 ```
 
 Expected output — **the order is still created successfully**:
@@ -458,7 +458,7 @@ Expected output — **the order is still created successfully**:
     "event_type": "order.created",
     "order": {
         "id": "...",
-        "status": "pending_supplier",
+        "status": "pending_source",
         ...
     }
 }
@@ -484,7 +484,7 @@ The warning confirms Kafka failed but the app continued.
 docker compose exec redis redis-cli KEYS "order:*"
 
 # Redis Stream
-docker compose exec redis redis-cli XLEN pizza_orders_stream
+docker compose exec redis redis-cli XLEN orders_stream
 ```
 
 The event is in Redis — the app didn't lose data.
@@ -501,10 +501,10 @@ docker compose start redpanda
 # Create another order
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Hawaiian","supplier_price":14.0,"markup_percentage":20.0}' > /dev/null
+  -d '{"source_name":"Quick Mart","item_name":"Book Collection","source_price":14.0,"markup_percentage":20.0}' > /dev/null
 
 # Watch Kafka events
-docker compose exec redpanda rpk topic consume pizza.orders --num 1
+docker compose exec redpanda rpk topic consume orders --num 1
 ```
 
 **Key insight:** The app never went down. Redis handled the outage gracefully. Kafka was just an optional enhancement that resumed automatically.
@@ -525,7 +525,7 @@ docker compose up -d backend
 for i in {1..10}; do
   curl -s -X POST http://localhost:8000/api/orders \
     -H "Content-Type: application/json" \
-    -d "{\"supplier_name\":\"Pizza Palace\",\"pizza_name\":\"Order $i\",\"supplier_price\":10.0,\"markup_percentage\":30.0}" &
+    -d "{\"source_name\":\"Quick Mart\",\"item_name\":\"Order $i\",\"source_price\":10.0,\"markup_percentage\":30.0}" &
 done
 wait
 
@@ -566,7 +566,7 @@ from aiokafka import AIOKafkaConsumer
 
 async def main():
     consumer = AIOKafkaConsumer(
-        "pizza.orders",
+        "orders",
         bootstrap_servers="localhost:9092",
         group_id="analytics-team",
         value_deserializer=lambda m: json.loads(m.decode()),
@@ -603,7 +603,7 @@ python custom_consumer.py
 # Terminal 3: Create an order
 curl -s -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Margherita","supplier_price":10.0,"markup_percentage":30.0}' > /dev/null
+  -d '{"source_name":"Quick Mart","item_name":"Electronics Bundle","source_price":10.0,"markup_percentage":30.0}' > /dev/null
 ```
 
 You should see output in:
@@ -646,7 +646,7 @@ ARCHIVE_FILE = "events_archive.jsonl"
 
 async def main():
     consumer = AIOKafkaConsumer(
-        "pizza.orders",
+        "orders",
         bootstrap_servers="localhost:9092",
         group_id="event-archiver",
         value_deserializer=lambda m: json.loads(m.decode()),
@@ -689,7 +689,7 @@ python event_archiver.py
 for i in {1..3}; do
   curl -s -X POST http://localhost:8000/api/orders \
     -H "Content-Type: application/json" \
-    -d "{\"supplier_name\":\"Pizza Palace\",\"pizza_name\":\"Pizza $i\",\"supplier_price\":10.0,\"markup_percentage\":30.0}" > /dev/null
+    -d "{\"source_name\":\"Quick Mart\",\"item_name\":\"Item $i\",\"source_price\":10.0,\"markup_percentage\":30.0}" > /dev/null
 done
 
 # Check the archive file
@@ -726,10 +726,10 @@ Inspect topic health, consumer lag, and message format.
 docker compose exec redpanda rpk topic list
 
 # Describe topic details
-docker compose exec redpanda rpk topic describe pizza.orders
+docker compose exec redpanda rpk topic describe orders
 
 # Check topic configuration
-docker compose exec redpanda rpk topic describe pizza.orders -d
+docker compose exec redpanda rpk topic describe orders -d
 ```
 
 ### 10.2 Consumer Group Status
@@ -758,7 +758,7 @@ Consumer lag shows how many messages are pending. Zero lag means the consumer is
 
 ```bash
 # Consume last 3 events with full metadata
-docker compose exec redpanda rpk topic consume pizza.orders --num 3
+docker compose exec redpanda rpk topic consume orders --num 3
 ```
 
 Each message shows:
@@ -775,7 +775,7 @@ Each message shows:
 docker compose exec redpanda rpk cluster health
 
 # Check partition distribution
-docker compose exec redpanda rpk topic describe pizza.orders
+docker compose exec redpanda rpk topic describe orders
 ```
 
 ---
@@ -795,10 +795,10 @@ graph TB
     OS["OrderService<br/><i>dual-write publisher</i>"]:::order
 
     KV[("Redis KV<br/><i>order:{id} state</i>")]:::redis
-    PS[("Redis Pub/Sub<br/><i>pizza_orders</i>")]:::redis
-    ST[("Redis Stream<br/><i>pizza_orders_stream</i>")]:::redis
+    PS[("Redis Pub/Sub<br/><i>orders</i>")]:::redis
+    ST[("Redis Stream<br/><i>orders_stream</i>")]:::redis
 
-    KA["Kafka Producer<br/><i>pizza.orders topic</i>"]:::kafka
+    KA["Kafka Producer<br/><i>orders topic</i>"]:::kafka
 
     BR["WebSocketBridge<br/><i>consumer: ws-bridge</i>"]:::consumer
     SC["StreamConsumer<br/><i>consumer group</i>"]:::consumer
@@ -833,7 +833,7 @@ graph TB
 
 | Topic          | Partitions | Key         | Retention     | Purpose                      |
 |----------------|------------|-------------|---------------|------------------------------|
-| `pizza.orders` | 3          | `order_id`  | 7 days        | All order lifecycle events   |
+| `orders` | 3          | `order_id`  | 7 days        | All order lifecycle events   |
 
 **Partitioning by `order_id`** ensures all events for a single order land on the same partition, preserving order.
 
@@ -846,18 +846,18 @@ Each Kafka message is a JSON object (the same structure used by Redis Pub/Sub an
   "event_type": "order.created",
   "order": {
     "id": "uuid-string",
-    "tracking_id": "PIZZA-2026-001234",
-    "supplier_name": "Pizza Palace",
-    "pizza_name": "Margherita",
-    "supplier_price": 10.0,
-    "customer_price": 13.0,
+    "tracking_id": "ORD-2026-001234",
+    "source_name": "Quick Mart",
+    "item_name": "Electronics Bundle",
+    "source_price": 10.0,
+    "buyer_price": 13.0,
     "markup_percentage": 30.0,
-    "status": "pending_supplier",
-    "customer_name": null,
+    "status": "pending_source",
+    "buyer_name": null,
     "delivery_address": null,
     "driver_name": null,
     "estimated_delivery_time": null,
-    "supplier_notes": null,
+    "source_notes": null,
     "created_at": "2026-07-08T12:00:00",
     "updated_at": "2026-07-08T12:00:00"
   },
@@ -898,8 +898,8 @@ async def _publish_event(self, event: OrderEvent):
     event_data = event.model_dump(mode='json')
 
     # 1. ALWAYS publish to Redis (instant broadcast + persistence)
-    await self.redis.publish("pizza_orders", json.dumps(event_data))
-    await self.redis.add_to_stream("pizza_orders_stream", stream_data)
+    await self.redis.publish("orders", json.dumps(event_data))
+    await self.redis.add_to_stream("orders_stream", stream_data)
 
     # 2. OPTIONALLY publish to Kafka (non-blocking on failure)
     if self.kafka:
@@ -965,13 +965,13 @@ async def broadcast_loop(self):
 | Variable                   | Default        | Description                              |
 |----------------------------|----------------|------------------------------------------|
 | `KAFKA_BOOTSTRAP_SERVERS`  | _(empty)_      | Kafka broker address (e.g., `localhost:9092`). Leave empty to disable Kafka. |
-| `KAFKA_TOPIC`              | `pizza.orders` | Topic name for order events              |
+| `KAFKA_TOPIC`              | `orders` | Topic name for order events              |
 
 Set in `backend/.env`:
 
 ```env
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-KAFKA_TOPIC=pizza.orders
+KAFKA_TOPIC=orders
 ```
 
 ### Settings Class (`config.py`)
@@ -980,7 +980,7 @@ KAFKA_TOPIC=pizza.orders
 class Settings(BaseSettings):
     ...
     kafka_bootstrap_servers: Optional[str] = None
-    kafka_topic: str = "pizza.orders"
+    kafka_topic: str = "orders"
 ```
 
 ---
@@ -1007,11 +1007,11 @@ Each order state transition publishes a distinct event type to Kafka:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING_SUPPLIER: order.created
-    PENDING_SUPPLIER --> SUPPLIER_ACCEPTED: order.supplier_accepted
-    PENDING_SUPPLIER --> SUPPLIER_REJECTED: order.supplier_rejected
-    SUPPLIER_ACCEPTED --> CUSTOMER_ACCEPTED: order.customer_accepted
-    CUSTOMER_ACCEPTED --> PREPARING: order.preparing
+    [*] --> PENDING_SOURCE: order.created
+    PENDING_SOURCE --> SOURCE_ACCEPTED: order.source_accepted
+    PENDING_SOURCE --> SOURCE_REJECTED: order.source_rejected
+    SOURCE_ACCEPTED --> BUYER_ACCEPTED: order.buyer_accepted
+    BUYER_ACCEPTED --> PREPARING: order.preparing
     PREPARING --> READY: order.ready
     READY --> DISPATCHED: order.dispatched
     DISPATCHED --> IN_TRANSIT: order.in_transit
@@ -1020,7 +1020,7 @@ stateDiagram-v2
     SUPPLIER_REJECTED --> [*]
 ```
 
-All are published to the same `pizza.orders` topic, keyed by `order_id` for per-order ordering.
+All are published to the same `orders` topic, keyed by `order_id` for per-order ordering.
 
 ---
 
@@ -1086,12 +1086,12 @@ Tests use mocked `AIOKafkaProducer` and `AIOKafkaConsumer` — no real Kafka bro
 docker compose up -d
 
 # Terminal 2: Watch events
-docker compose exec redpanda rpk topic consume pizza.orders
+docker compose exec redpanda rpk topic consume orders
 
 # Terminal 3: Create an order
 curl -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Margherita","supplier_price":10.0,"markup_percentage":30.0}'
+  -d '{"source_name":"Quick Mart","item_name":"Electronics Bundle","source_price":10.0,"markup_percentage":30.0}'
 ```
 
 ---
@@ -1105,7 +1105,7 @@ curl -X POST http://localhost:8000/api/orders \
 docker compose exec redpanda rpk topic list
 
 # Describe topic
-docker compose exec redpanda rpk topic describe pizza.orders
+docker compose exec redpanda rpk topic describe orders
 
 # Check consumer group status
 docker compose exec redpanda rpk group describe ws-bridge
@@ -1161,7 +1161,7 @@ docker compose exec redpanda rpk group describe ws-bridge
 
 - **Schema Registry** — Add Confluent Schema Registry + Avro/Protobuf for schema evolution
 - **Kafka Connect** — Sink events to Elasticsearch, S3, or a time-series DB
-- **Kafka Streams / ksqlDB** — Real-time aggregations (orders per supplier, delivery times)
-- **Dead Letter Queue** — Route failed events to a `pizza.orders.dlq` topic
+- **Kafka Streams / ksqlDB** — Real-time aggregations (orders per source, delivery times)
+- **Dead Letter Queue** — Route failed events to a `orders.dlq` topic
 - **Idempotent Producer** — Enable `enable.idempotence=true` for exactly-once semantics
 - **Tiered Storage** — Redpanda supports object store tiering for long retention

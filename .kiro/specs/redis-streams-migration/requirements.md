@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The pizza delivery marketplace currently uses Redis Pub/Sub (`PUBLISH`/`SUBSCRIBE`) for real-time event delivery. This works well for live clients but has a fundamental limitation: Pub/Sub is fire-and-forget. If no subscriber is listening when an event is published, the event is permanently lost. There is no message persistence, no way to replay events after a crash or reconnect, no consumer group semantics to track which events have been processed, and no audit trail of what occurred.
+The order delivery platform currently uses Redis Pub/Sub (`PUBLISH`/`SUBSCRIBE`) for real-time event delivery. This works well for live clients but has a fundamental limitation: Pub/Sub is fire-and-forget. If no subscriber is listening when an event is published, the event is permanently lost. There is no message persistence, no way to replay events after a crash or reconnect, no consumer group semantics to track which events have been processed, and no audit trail of what occurred.
 
 This creates concrete problems in the current system:
 
@@ -32,8 +32,8 @@ All existing tests and behavior remain unchanged. Redis Streams is purely additi
 ## Glossary
 
 - **RedisClient**: The `RedisClient` class in `redis_client.py` that manages the connection to Redis and exposes both Pub/Sub and Streams methods.
-- **PubSub_Channel**: The existing Redis Pub/Sub channel `pizza_orders` used for real-time fire-and-forget event delivery.
-- **Stream**: The Redis Stream key `pizza_orders_stream` that stores a persistent, ordered log of all order events.
+- **PubSub_Channel**: The existing Redis Pub/Sub channel `orders` used for real-time fire-and-forget event delivery.
+- **Stream**: The Redis Stream key `orders_stream` that stores a persistent, ordered log of all order events.
 - **Stream_Writer**: The new `xadd` method on `RedisClient` that appends events to the Stream.
 - **Stream_Reader**: The new `xreadgroup` method on `RedisClient` that reads events from the Stream using a Consumer_Group.
 - **Consumer_Group**: A Redis Streams consumer group that tracks which messages have been delivered and acknowledged, enabling reliable at-least-once delivery.
@@ -56,7 +56,7 @@ All existing tests and behavior remain unchanged. Redis Streams is purely additi
 
 1. THE `RedisClient` SHALL retain the `publish(channel: str, message: str)` coroutine that issues a Redis `PUBLISH` command to the given channel.
 2. THE `RedisClient` SHALL retain the `subscribe(channel: str)` coroutine that returns a `pubsub` object compatible with the existing WebSocket bridge loop in `main.py`.
-3. WHEN `Order_Service` calls `redis_client.publish("pizza_orders", json_string)`, THE `RedisClient` SHALL deliver the message to all active Pub/Sub subscribers on that channel without modification.
+3. WHEN `Order_Service` calls `redis_client.publish("orders", json_string)`, THE `RedisClient` SHALL deliver the message to all active Pub/Sub subscribers on that channel without modification.
 4. WHEN the test suite in `backend/tests/` is executed, THE system SHALL pass all existing tests without any modification to the test files.
 5. THE `RedisClient` SHALL retain the `connect()` and `disconnect()` lifecycle methods with the same signatures and behavior.
 
@@ -96,8 +96,8 @@ All existing tests and behavior remain unchanged. Redis Streams is purely additi
 
 #### Acceptance Criteria
 
-1. WHEN the application starts up, THE `RedisClient` SHALL create a Consumer_Group named `pizza_consumers` on the `pizza_orders_stream` stream if it does not already exist.
-2. WHEN the `pizza_orders_stream` stream does not exist at startup, THE `RedisClient` SHALL create the stream and the Consumer_Group atomically using `XGROUP CREATE ... MKSTREAM`.
+1. WHEN the application starts up, THE `RedisClient` SHALL create a Consumer_Group named `event_processors` on the `orders_stream` stream if it does not already exist.
+2. WHEN the `orders_stream` stream does not exist at startup, THE `RedisClient` SHALL create the stream and the Consumer_Group atomically using `XGROUP CREATE ... MKSTREAM`.
 3. WHEN the Consumer_Group already exists at startup, THE `RedisClient` SHALL continue without raising an error.
 4. THE `RedisClient` SHALL use the starting offset `$` for the Consumer_Group so that only new messages are delivered to consumers by default.
 
@@ -109,7 +109,7 @@ All existing tests and behavior remain unchanged. Redis Streams is purely additi
 
 #### Acceptance Criteria
 
-1. WHEN `Order_Service` publishes any order lifecycle event (`order.created`, `order.supplier_accepted`, `order.supplier_rejected`, `order.customer_accepted`, `order.dispatched`, `order.{status}`), THE `Order_Service` SHALL call both `redis_client.publish` (Pub/Sub) and `redis_client.xadd` (Stream) for each event.
+1. WHEN `Order_Service` publishes any order lifecycle event (`order.created`, `order.source_accepted`, `order.source_rejected`, `order.buyer_accepted`, `order.dispatched`, `order.{status}`), THE `Order_Service` SHALL call both `redis_client.publish` (Pub/Sub) and `redis_client.xadd` (Stream) for each event.
 2. WHEN `Batch_Dispatcher` publishes a batch of events, THE `Order_Service` SHALL append each event to the Stream in addition to publishing it on the Pub/Sub channel, in the same order.
 3. WHEN a `batch.rollback` event is triggered, THE `Order_Service` SHALL append the rollback event to the Stream in addition to publishing it on the Pub/Sub channel.
 4. IF the `xadd` call fails for any event, THEN THE `Order_Service` SHALL log the failure and continue without interrupting the Pub/Sub delivery path.

@@ -2,20 +2,20 @@ import { useState } from 'react'
 
 function CustomerPanel({ orders }) {
   const [selectedOrder, setSelectedOrder] = useState('')
-  const [customerName, setCustomerName] = useState('')
+  const [buyerName, setBuyerName] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
 
-  const availableOrders = orders.filter(e => e.order.status === 'supplier_accepted')
+  const availableOrders = orders.filter(e => e.order.status === 'source_accepted')
 
   const handleAccept = async (e) => {
     e.preventDefault()
     
-    await fetch(`http://localhost:8000/api/orders/${selectedOrder}/customer-accept?customer_name=${encodeURIComponent(customerName)}&delivery_address=${encodeURIComponent(deliveryAddress)}`, {
+    await fetch(`http://localhost:8000/api/orders/${selectedOrder}/buyer-accept?buyer_name=${encodeURIComponent(buyerName)}&delivery_address=${encodeURIComponent(deliveryAddress)}`, {
       method: 'POST'
     })
     
     setSelectedOrder('')
-    setCustomerName('')
+    setBuyerName('')
     setDeliveryAddress('')
   }
 
@@ -23,7 +23,7 @@ function CustomerPanel({ orders }) {
 
   return (
     <div style={{ border: '2px solid #4ecdc4', borderRadius: '8px', padding: '20px', backgroundColor: '#f0fffe' }}>
-      <h2>👤 Customer</h2>
+      <h2>👤 Buyer</h2>
       
       <h3 style={{ marginTop: '0' }}>Available Orders ({availableOrders.length})</h3>
       {availableOrders.length === 0 ? (
@@ -40,21 +40,21 @@ function CustomerPanel({ orders }) {
               <option value="">Select Order</option>
               {availableOrders.map(e => (
                 <option key={e.order.id} value={e.order.id}>
-                  {e.order.pizza_name} - ${e.order.supplier_price} ({e.order.supplier_name})
+                  {e.order.item_name} - ${e.order.source_price} ({e.order.source_name})
                 </option>
               ))}
             </select>
           </div>
           {selectedOrderData && (
             <div style={{ padding: '8px', backgroundColor: '#e0f7f7', borderRadius: '4px', marginBottom: '8px', fontSize: '12px' }}>
-              <div><strong>Base:</strong> ${selectedOrderData.order.supplier_price}</div>
+              <div><strong>Base:</strong> ${selectedOrderData.order.source_price}</div>
               <div><strong>Markup:</strong> {selectedOrderData.order.markup_percentage}%</div>
-              <div><strong>Your Price:</strong> ${(selectedOrderData.order.supplier_price * (1 + selectedOrderData.order.markup_percentage / 100)).toFixed(2)}</div>
+              <div><strong>Your Price:</strong> ${(selectedOrderData.order.source_price * (1 + selectedOrderData.order.markup_percentage / 100)).toFixed(2)}</div>
               {selectedOrderData.order.estimated_delivery_time && (
                 <div><strong>Est. Time:</strong> {selectedOrderData.order.estimated_delivery_time} min</div>
               )}
-              {selectedOrderData.order.supplier_notes && (
-                <div><strong>Notes:</strong> {selectedOrderData.order.supplier_notes}</div>
+              {selectedOrderData.order.source_notes && (
+                <div><strong>Notes:</strong> {selectedOrderData.order.source_notes}</div>
               )}
             </div>
           )}
@@ -62,8 +62,8 @@ function CustomerPanel({ orders }) {
             <input
               type="text"
               placeholder="Your Name"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              value={buyerName}
+              onChange={(e) => setBuyerName(e.target.value)}
               required
               style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontSize: '13px' }}
             />

@@ -8,7 +8,7 @@ import json
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
-from models import PizzaOrder, OrderEvent, OrderStatus
+from models import Order, OrderEvent, OrderStatus
 from services.order_service import OrderService
 from redis_client import RedisClient
 
@@ -107,21 +107,21 @@ async def test_stream_event_publication(mock_redis_streams):
     order_service = OrderService(mock_redis_streams)
     
     # Create an order
-    order = PizzaOrder(
-        supplier_name="Test Pizza Co",
-        pizza_name="Margherita",
-        supplier_price=15.99,
+    order = Order(
+        source_name="Test Source Co",
+        item_name="Test Item",
+        source_price=15.99,
         markup_percentage=30.0
     )
     
     event = await order_service.create_order(order)
     
     # Verify event was published to stream
-    assert "pizza_orders_stream" in mock_redis_streams._streams
-    assert len(mock_redis_streams._streams["pizza_orders_stream"]) > 0
+    assert "orders_stream" in mock_redis_streams._streams
+    assert len(mock_redis_streams._streams["orders_stream"]) > 0
     
     # Verify stream entry contains event data
-    stream_id, stream_data = mock_redis_streams._streams["pizza_orders_stream"][-1]
+    stream_id, stream_data = mock_redis_streams._streams["orders_stream"][-1]
     assert stream_data["event_type"] == "order.created"
     assert stream_data["order_id"] == order.id
 
@@ -134,17 +134,17 @@ async def test_stream_read_operations(mock_redis_streams):
     # Create multiple orders
     orders = []
     for i in range(3):
-        order = PizzaOrder(
-            supplier_name=f"Pizza Co {i}",
-            pizza_name=f"Pizza {i}",
-            supplier_price=15.99 + i,
+        order = Order(
+            source_name=f"Source Co {i}",
+            item_name=f"Item {i}",
+            source_price=15.99 + i,
             markup_percentage=30.0
         )
         event = await order_service.create_order(order)
         orders.append(order)
     
     # Read from stream
-    entries = await mock_redis_streams.read_stream("pizza_orders_stream", count=2)
+    entries = await mock_redis_streams.read_stream("orders_stream", count=2)
     
     assert len(entries) == 2
     assert entries[-1][1]["event_type"] == "order.created"
@@ -156,27 +156,27 @@ async def test_stream_with_correlation_id(mock_redis_streams):
     order_service = OrderService(mock_redis_streams)
     
     # Create an order
-    order = PizzaOrder(
-        supplier_name="Test Pizza Co",
-        pizza_name="Margherita",
-        supplier_price=15.99,
+    order = Order(
+        source_name="Test Source Co",
+        item_name="Test Item",
+        source_price=15.99,
         markup_percentage=30.0
     )
     
     event = await order_service.create_order(order)
     
-    # Accept order as supplier
-    event = await order_service.supplier_respond(order.id, accept=True, estimated_time=30)
+    # Accept order as source
+    event = await order_service.source_respond(order.id, accept=True, estimated_time=30)
     
     # Check that events are in stream
-    entries = await mock_redis_streams.read_stream("pizza_orders_stream")
+    entries = await mock_redis_streams.read_stream("orders_stream")
     
     assert len(entries) >= 2
     
     # Both events should be in stream
     event_types = [entry[1]["event_type"] for entry in entries]
     assert "order.created" in event_types
-    assert "order.supplier_accepted" in event_types
+    assert "order.source_accepted" in event_types
 
 
 @pytest.mark.asyncio
@@ -185,16 +185,16 @@ async def test_stream_info_retrieval(mock_redis_streams):
     order_service = OrderService(mock_redis_streams)
     
     # Create an order to populate stream
-    order = PizzaOrder(
-        supplier_name="Test Pizza Co",
-        pizza_name="Margherita",
-        supplier_price=15.99,
+    order = Order(
+        source_name="Test Source Co",
+        item_name="Test Item",
+        source_price=15.99,
         markup_percentage=30.0
     )
     await order_service.create_order(order)
     
     # Get stream info
-    info = await mock_redis_streams.get_stream_info("pizza_orders_stream")
+    info = await mock_redis_streams.get_stream_info("orders_stream")
     
     assert info is not None
     assert "length" in info
@@ -206,7 +206,7 @@ async def test_stream_consumer_group_creation(mock_redis_streams):
     """Test creating consumer groups"""
     # Create consumer group
     result = await mock_redis_streams.create_consumer_group(
-        "pizza_orders_stream",
+        "orders_stream",
         "test_group"
     )
     
@@ -219,21 +219,21 @@ async def test_stream_message_acknowledgment(mock_redis_streams):
     order_service = OrderService(mock_redis_streams)
     
     # Create an order
-    order = PizzaOrder(
-        supplier_name="Test Pizza Co",
-        pizza_name="Margherita",
-        supplier_price=15.99,
+    order = Order(
+        source_name="Test Source Co",
+        item_name="Test Item",
+        source_price=15.99,
         markup_percentage=30.0
     )
     await order_service.create_order(order)
     
     # Get message IDs
-    entries = await mock_redis_streams.read_stream("pizza_orders_stream")
+    entries = await mock_redis_streams.read_stream("orders_stream")
     message_ids = [entry[0] for entry in entries]
     
     # Acknowledge messages
     ack_count = await mock_redis_streams.acknowledge_message(
-        "pizza_orders_stream",
+        "orders_stream",
         "test_group",
         message_ids
     )
@@ -248,23 +248,23 @@ async def test_stream_trim_operation(mock_redis_streams):
     
     # Create 5 orders
     for i in range(5):
-        order = PizzaOrder(
-            supplier_name=f"Pizza Co {i}",
-            pizza_name=f"Pizza {i}",
-            supplier_price=15.99,
+        order = Order(
+            source_name=f"Source Co {i}",
+            item_name=f"Item {i}",
+            source_price=15.99,
             markup_percentage=30.0
         )
         await order_service.create_order(order)
     
     # Get initial stream size
-    info = await mock_redis_streams.get_stream_info("pizza_orders_stream")
+    info = await mock_redis_streams.get_stream_info("orders_stream")
     initial_length = info["length"]
     
     # Trim stream to keep only 2 entries
-    await mock_redis_streams.trim_stream("pizza_orders_stream", 2)
+    await mock_redis_streams.trim_stream("orders_stream", 2)
     
     # Check trimmed size
-    info = await mock_redis_streams.get_stream_info("pizza_orders_stream")
+    info = await mock_redis_streams.get_stream_info("orders_stream")
     assert info["length"] <= 2
 
 
@@ -274,33 +274,33 @@ async def test_stream_persistence_across_orders(mock_redis_streams):
     order_service = OrderService(mock_redis_streams)
     
     # Create order
-    order = PizzaOrder(
-        supplier_name="Test Pizza Co",
-        pizza_name="Margherita",
-        supplier_price=15.99,
+    order = Order(
+        source_name="Test Source Co",
+        item_name="Test Item",
+        source_price=15.99,
         markup_percentage=30.0
     )
     await order_service.create_order(order)
     
-    # Accept as supplier
-    await order_service.supplier_respond(order.id, accept=True, estimated_time=30)
+    # Accept as source
+    await order_service.source_respond(order.id, accept=True, estimated_time=30)
     
-    # Accept as customer
-    await order_service.customer_accept(order.id, "John Doe", "123 Main St")
+    # Accept as buyer
+    await order_service.buyer_accept(order.id, "John Doe", "123 Main St")
     
     # Dispatch
     await order_service.dispatch_order(order.id, "Bob Driver")
     
     # Check stream has all events
-    entries = await mock_redis_streams.read_stream("pizza_orders_stream")
+    entries = await mock_redis_streams.read_stream("orders_stream")
     
-    # Should have at least 4 events (create, supplier_accept, customer_accept, dispatch)
+    # Should have at least 4 events (create, source_accept, buyer_accept, dispatch)
     assert len(entries) >= 4
     
     event_types = [entry[1]["event_type"] for entry in entries]
     assert "order.created" in event_types
-    assert "order.supplier_accepted" in event_types
-    assert "order.customer_accepted" in event_types
+    assert "order.source_accepted" in event_types
+    assert "order.buyer_accepted" in event_types
     assert "order.dispatched" in event_types
 
 
@@ -330,7 +330,7 @@ async def test_stream_batch_operations(mock_redis_streams):
     assert result.processed_count == 2
     
     # Verify events in stream
-    info = await mock_redis_streams.get_stream_info("pizza_orders_stream")
+    info = await mock_redis_streams.get_stream_info("orders_stream")
     assert info is not None
 
 

@@ -6,9 +6,9 @@ async def test_create_order_endpoint(client):
     response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "API Test Pizza",
-            "pizza_name": "Pepperoni",
-            "supplier_price": 12.0,
+            "source_name": "API Test Source",
+            "item_name": "Kitchen Set",
+            "source_price": 12.0,
             "markup_percentage": 25.0
         }
     )
@@ -16,7 +16,7 @@ async def test_create_order_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert data["event_type"] == "order.created"
-    assert data["order"]["pizza_name"] == "Pepperoni"
+    assert data["order"]["item_name"] == "Kitchen Set"
     assert data["order"]["id"] is not None
 
 @pytest.mark.asyncio
@@ -26,9 +26,9 @@ async def test_get_orders_endpoint(client):
     await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
@@ -39,26 +39,26 @@ async def test_get_orders_endpoint(client):
     assert response.status_code == 200
     orders = response.json()
     assert len(orders) >= 1
-    assert orders[0]["pizza_name"] == "Margherita"
+    assert orders[0]["item_name"] == "Test Item"
 
 @pytest.mark.asyncio
-async def test_supplier_respond_endpoint(client):
-    """Test POST /api/orders/{id}/supplier-respond endpoint"""
+async def test_source_respond_endpoint(client):
+    """Test POST /api/orders/{id}/source-respond endpoint"""
     # Create order
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    # Supplier accepts
+    # Source accepts
     response = await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={
             "accept": True,
             "notes": "Fresh ingredients",
@@ -68,43 +68,43 @@ async def test_supplier_respond_endpoint(client):
     
     assert response.status_code == 200
     data = response.json()
-    assert data["event_type"] == "order.supplier_accepted"
-    assert data["order"]["supplier_notes"] == "Fresh ingredients"
+    assert data["event_type"] == "order.source_accepted"
+    assert data["order"]["source_notes"] == "Fresh ingredients"
 
 @pytest.mark.asyncio
-async def test_customer_accept_endpoint(client):
-    """Test POST /api/orders/{id}/customer-accept endpoint"""
-    # Create and supplier accepts order
+async def test_buyer_accept_endpoint(client):
+    """Test POST /api/orders/{id}/buyer-accept endpoint"""
+    # Create and source accepts order
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
     await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={"accept": True}
     )
     
-    # Customer accepts
+    # Buyer accepts
     response = await client.post(
-        f"/api/orders/{order_id}/customer-accept",
+        f"/api/orders/{order_id}/buyer-accept",
         params={
-            "customer_name": "John Doe",
+            "buyer_name": "John Doe",
             "delivery_address": "123 Main St"
         }
     )
     
     assert response.status_code == 200
     data = response.json()
-    assert data["event_type"] == "order.customer_accepted"
-    assert data["order"]["customer_name"] == "John Doe"
-    assert data["order"]["customer_price"] == 13.0
+    assert data["event_type"] == "order.buyer_accepted"
+    assert data["order"]["buyer_name"] == "John Doe"
+    assert data["order"]["buyer_price"] == 13.0
 
 @pytest.mark.asyncio
 async def test_dispatch_endpoint(client):
@@ -113,16 +113,16 @@ async def test_dispatch_endpoint(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "John", "delivery_address": "123 St"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "John", "delivery_address": "123 St"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "preparing"})
     await client.post(f"/api/orders/{order_id}/status", params={"status": "ready"})
     
@@ -144,16 +144,16 @@ async def test_update_status_endpoint(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
-    await client.post(f"/api/orders/{order_id}/customer-accept", params={"customer_name": "John", "delivery_address": "123 St"})
+    await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
+    await client.post(f"/api/orders/{order_id}/buyer-accept", params={"buyer_name": "John", "delivery_address": "123 St"})
     
     # Update to preparing
     response = await client.post(
@@ -169,7 +169,7 @@ async def test_update_status_endpoint(client):
 async def test_invalid_order_id(client):
     """Test endpoints with invalid order ID"""
     response = await client.post(
-        "/api/orders/invalid-id/supplier-respond",
+        "/api/orders/invalid-id/source-respond",
         params={"accept": True}
     )
     

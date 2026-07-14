@@ -383,7 +383,7 @@ services:
 3. **Business Metrics**
    - Orders per hour
    - Average delivery time
-   - Customer satisfaction
+   - Buyer satisfaction
 
 ### Alert Configuration
 ```yaml

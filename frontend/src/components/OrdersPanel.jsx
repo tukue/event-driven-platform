@@ -2,10 +2,10 @@ import { useState } from 'react'
 
 const statusColors = {
   created: '#ffd93d',
-  pending_supplier: '#ffd93d',
-  supplier_accepted: '#6bcf7f',
-  supplier_rejected: '#ef4444',
-  customer_accepted: '#10b981',
+  pending_source: '#ffd93d',
+  source_accepted: '#6bcf7f',
+  source_rejected: '#ef4444',
+  buyer_accepted: '#10b981',
   preparing: '#ff9a3c',
   ready: '#4ecdc4',
   dispatched: '#a78bfa',
@@ -16,12 +16,12 @@ const statusColors = {
 
 const statusEmojis = {
   created: '📝',
-  pending_supplier: '⏳',
-  supplier_accepted: '✅',
-  supplier_rejected: '❌',
-  customer_accepted: '🤝',
+  pending_source: '⏳',
+  source_accepted: '✅',
+  source_rejected: '❌',
+  buyer_accepted: '🤝',
   preparing: '👨‍🍳',
-  ready: '🍕',
+  ready: '📦',
   dispatched: '📦',
   in_transit: '🚗',
   delivered: '🎉',
@@ -51,21 +51,21 @@ function OrdersPanel({ orders, onTrackDelivery }) {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 10px 0' }}>{event.order.pizza_name}</h3>
+                  <h3 style={{ margin: '0 0 10px 0' }}>{event.order.item_name}</h3>
                   <p style={{ margin: '5px 0' }}>
-                    <strong>Supplier:</strong> {event.order.supplier_name} | 
-                    <strong> Base Price:</strong> ${event.order.supplier_price}
+                    <strong>Source:</strong> {event.order.source_name} | 
+                    <strong> Base Price:</strong> ${event.order.source_price}
                   </p>
-                  {event.order.customer_name && (
+                  {event.order.buyer_name && (
                     <>
                       <p style={{ margin: '5px 0' }}>
-                        <strong>Customer:</strong> {event.order.customer_name}
+                        <strong>Buyer:</strong> {event.order.buyer_name}
                       </p>
                       <p style={{ margin: '5px 0' }}>
                         <strong>Delivery:</strong> {event.order.delivery_address}
                       </p>
                       <p style={{ margin: '5px 0' }}>
-                        <strong>Customer Price:</strong> ${event.order.customer_price} 
+                        <strong>Buyer Price:</strong> ${event.order.buyer_price} 
                         <span style={{ color: '#10b981', marginLeft: '5px' }}>
                           (+{event.order.markup_percentage}%)
                         </span>
@@ -106,9 +106,9 @@ function OrdersPanel({ orders, onTrackDelivery }) {
                     </button>
                   )}
                   
-                  {!['delivered', 'cancelled', 'supplier_rejected', 'created', 'pending_supplier', 'supplier_accepted'].includes(event.order.status) && (
+                  {!['delivered', 'cancelled', 'source_rejected', 'created', 'pending_source', 'source_accepted'].includes(event.order.status) && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      {event.order.status === 'customer_accepted' && (
+                      {event.order.status === 'buyer_accepted' && (
                         <button onClick={() => updateStatus(event.order.id, 'preparing')} style={{ padding: '5px 10px', fontSize: '12px' }}>
                           Start Preparing
                         </button>

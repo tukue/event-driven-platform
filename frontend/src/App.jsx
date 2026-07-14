@@ -68,7 +68,7 @@ function App() {
           height: '60px'
         }}>
           <h1 style={{ margin: 0, fontSize: '20px', color: 'white' }}>
-            🍕 Pizza Delivery Platform
+            📦 Order Delivery Platform
           </h1>
           
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

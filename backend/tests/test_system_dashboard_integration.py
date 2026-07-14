@@ -36,7 +36,7 @@ async def test_system_statistics_fields(client):
         "total_orders",
         "active_deliveries",
         "completed_today",
-        "pending_supplier",
+        "pending_source",
         "preparing",
         "ready",
         "dispatched",
@@ -56,9 +56,9 @@ async def test_orders_by_status_structure(client):
     
     # Create a test order
     order_data = {
-        "pizza_name": "Test Pizza",
-        "supplier_name": "Test Supplier",
-        "supplier_price": 12.99
+        "item_name": "Test Item",
+        "source_name": "Test Source",
+        "source_price": 12.99
     }
     create_response = await client.post("/api/orders", json=order_data)
     assert create_response.status_code == 200
@@ -82,8 +82,8 @@ async def test_orders_by_status_structure(client):
                 found = True
                 # Verify order structure
                 assert "id" in order
-                assert "pizza_name" in order
-                assert "supplier_name" in order
+                assert "item_name" in order
+                assert "source_name" in order
                 assert "status" in order
                 break
         if found:
@@ -98,23 +98,23 @@ async def test_active_drivers_tracking(client):
     
     # Create and dispatch an order
     order_data = {
-        "pizza_name": "Driver Test Pizza",
-        "supplier_name": "Test Supplier",
-        "supplier_price": 13.99
+        "item_name": "Driver Test Item",
+        "source_name": "Test Source",
+        "source_price": 13.99
     }
     response = await client.post("/api/orders", json=order_data)
     order_id = response.json()["order"]["id"]
     
-    # Accept as supplier
+    # Accept as source
     await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={"accept": True, "notes": "Test", "estimated_time": 30}
     )
     
-    # Accept as customer
+    # Accept as buyer
     await client.post(
-        f"/api/orders/{order_id}/customer-accept",
-        params={"customer_name": "Test Customer", "delivery_address": "Test Address"}
+        f"/api/orders/{order_id}/buyer-accept",
+        params={"buyer_name": "Test Buyer", "delivery_address": "Test Address"}
     )
     
     # Prepare
@@ -151,21 +151,21 @@ async def test_active_drivers_removed_after_delivery(client):
     
     # Create and complete an order
     order_data = {
-        "pizza_name": "Completion Test Pizza",
-        "supplier_name": "Test Supplier",
-        "supplier_price": 14.99
+        "item_name": "Completion Test Item",
+        "source_name": "Test Source",
+        "source_price": 14.99
     }
     response = await client.post("/api/orders", json=order_data)
     order_id = response.json()["order"]["id"]
     
     # Progress through workflow
     await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={"accept": True, "estimated_time": 30}
     )
     await client.post(
-        f"/api/orders/{order_id}/customer-accept",
-        params={"customer_name": "Test", "delivery_address": "Test"}
+        f"/api/orders/{order_id}/buyer-accept",
+        params={"buyer_name": "Test", "delivery_address": "Test"}
     )
     await client.post(f"/api/orders/{order_id}/status?status=preparing")
     await client.post(f"/api/orders/{order_id}/status?status=ready")
@@ -194,21 +194,21 @@ async def test_include_completed_parameter(client):
     
     # Create and complete an order
     order_data = {
-        "pizza_name": "Completed Pizza",
-        "supplier_name": "Test Supplier",
-        "supplier_price": 15.99
+        "item_name": "Completed Item",
+        "source_name": "Test Source",
+        "source_price": 15.99
     }
     response = await client.post("/api/orders", json=order_data)
     order_id = response.json()["order"]["id"]
     
     # Complete the order
     await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={"accept": True, "estimated_time": 30}
     )
     await client.post(
-        f"/api/orders/{order_id}/customer-accept",
-        params={"customer_name": "Test", "delivery_address": "Test"}
+        f"/api/orders/{order_id}/buyer-accept",
+        params={"buyer_name": "Test", "delivery_address": "Test"}
     )
     await client.post(f"/api/orders/{order_id}/status?status=preparing")
     await client.post(f"/api/orders/{order_id}/status?status=ready")
@@ -245,9 +245,9 @@ async def test_limit_parameter(client):
     # Create multiple orders in same status
     for i in range(5):
         order_data = {
-            "pizza_name": f"Limit Test Pizza {i}",
-            "supplier_name": "Test Supplier",
-            "supplier_price": 10.99 + i
+            "item_name": f"Limit Test Item {i}",
+            "source_name": "Test Source",
+            "source_price": 10.99 + i
         }
         await client.post("/api/orders", json=order_data)
     
@@ -273,9 +273,9 @@ async def test_statistics_update_on_order_creation(client):
     
     # Create a new order
     order_data = {
-        "pizza_name": "Stats Test Pizza",
-        "supplier_name": "Test Supplier",
-        "supplier_price": 11.99
+        "item_name": "Stats Test Item",
+        "source_name": "Test Source",
+        "source_price": 11.99
     }
     await client.post("/api/orders", json=order_data)
     
@@ -298,21 +298,21 @@ async def test_active_deliveries_count(client):
     
     # Create and dispatch an order
     order_data = {
-        "pizza_name": "Active Delivery Test",
-        "supplier_name": "Test Supplier",
-        "supplier_price": 12.99
+        "item_name": "Active Delivery Test",
+        "source_name": "Test Source",
+        "source_price": 12.99
     }
     response = await client.post("/api/orders", json=order_data)
     order_id = response.json()["order"]["id"]
     
     # Progress to dispatched
     await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={"accept": True, "estimated_time": 30}
     )
     await client.post(
-        f"/api/orders/{order_id}/customer-accept",
-        params={"customer_name": "Test", "delivery_address": "Test"}
+        f"/api/orders/{order_id}/buyer-accept",
+        params={"buyer_name": "Test", "delivery_address": "Test"}
     )
     await client.post(f"/api/orders/{order_id}/status?status=preparing")
     await client.post(f"/api/orders/{order_id}/status?status=ready")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Test runner script for pizza delivery app
+Test runner script for order delivery app
 Run all tests or specific test suites
 """
 import sys
@@ -10,7 +10,7 @@ def run_tests(test_type="all"):
     """Run tests based on type"""
     
     print("=" * 60)
-    print("🧪 Pizza Delivery App - Test Suite")
+    print("🧪 Order Delivery App - Test Suite")
     print("=" * 60)
     
     if test_type == "unit":

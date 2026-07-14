@@ -55,11 +55,11 @@ POST /api/events/batch
 
 ### Tracking
 ```bash
-# Track by customer ID
+# Track by buyer ID
 GET /api/track/{tracking_id}
 
-# Track by supplier ID
-GET /api/track/supplier/{supplier_tracking_id}
+# Track by source ID
+GET /api/track/source/{source_tracking_id}
 ```
 
 ### Metrics

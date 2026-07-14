@@ -1,6 +1,6 @@
 # Redis Streams Integration
 
-This document describes the Redis Streams integration implemented in the event-driven pizza delivery platform.
+This document describes the Redis Streams integration implemented in the event-driven order delivery platform.
 
 ## Overview
 
@@ -16,8 +16,8 @@ Redis Streams provide a powerful data structure for handling event streams with 
 ### Dual Publishing Strategy
 
 The system now publishes events to both:
-1. **Redis Pub/Sub** (`pizza_orders` channel) - for real-time WebSocket updates
-2. **Redis Stream** (`pizza_orders_stream`) - for persistent event storage and processing
+1. **Redis Pub/Sub** (`orders` channel) - for real-time WebSocket updates
+2. **Redis Stream** (`orders_stream`) - for persistent event storage and processing
 
 ### Stream Structure
 
@@ -96,25 +96,25 @@ Use the stream inspector utility:
 
 ```bash
 # Get stream information
-python inspect_streams.py info pizza_orders_stream
+python inspect_streams.py info orders_stream
 
 # Read recent events
-python inspect_streams.py read pizza_orders_stream 20
+python inspect_streams.py read orders_stream 20
 
 # List all streams
 python inspect_streams.py list
 
 # Get consumer group info
-python inspect_streams.py group-info pizza_orders_stream event_processors
+python inspect_streams.py group-info orders_stream event_processors
 
 # Create a consumer group
-python inspect_streams.py create-group pizza_orders_stream my_group 0
+python inspect_streams.py create-group orders_stream my_group 0
 
 # Trim stream to max length
-python inspect_streams.py trim pizza_orders_stream 1000
+python inspect_streams.py trim orders_stream 1000
 
 # Clear stream (delete all entries)
-python inspect_streams.py clear pizza_orders_stream
+python inspect_streams.py clear orders_stream
 ```
 
 ### Testing Streams
@@ -131,8 +131,8 @@ python test_streams.py
 
 The `StreamConsumer` includes handlers for:
 - `order.created` - Log order creation
-- `order.supplier_accepted` - Track supplier responses
-- `order.customer_accepted` - Track customer confirmations
+- `order.source_accepted` - Track source responses
+- `order.buyer_accepted` - Track buyer confirmations
 - `order.dispatched` - Track dispatches
 - `order.delivered` - Track deliveries
 
@@ -153,7 +153,7 @@ event_processor.consumer.register_handler("order.custom_event", my_custom_handle
 ### Default Consumer Group
 
 - **Name**: `event_processors`
-- **Stream**: `pizza_orders_stream`
+- **Stream**: `orders_stream`
 - **Behavior**: Processes events asynchronously for metrics, notifications, etc.
 
 ### Creating Additional Groups
@@ -162,10 +162,10 @@ For different processing needs:
 
 ```python
 # Analytics consumer group
-await redis_client.create_consumer_group("pizza_orders_stream", "analytics_group")
+await redis_client.create_consumer_group("orders_stream", "analytics_group")
 
 # Notification consumer group
-await redis_client.create_consumer_group("pizza_orders_stream", "notification_group")
+await redis_client.create_consumer_group("orders_stream", "notification_group")
 ```
 
 ## Monitoring and Maintenance
@@ -174,11 +174,11 @@ await redis_client.create_consumer_group("pizza_orders_stream", "notification_gr
 
 ```python
 # Get stream info
-info = await redis_client.get_stream_info("pizza_orders_stream")
+info = await redis_client.get_stream_info("orders_stream")
 print(f"Stream length: {info['length']}")
 
 # Check pending messages
-pending = await redis_client.get_pending_messages("pizza_orders_stream", "event_processors")
+pending = await redis_client.get_pending_messages("orders_stream", "event_processors")
 ```
 
 ### Stream Trimming
@@ -187,14 +187,14 @@ To prevent unbounded growth:
 
 ```python
 # Keep only last 10,000 events
-await redis_client.trim_stream("pizza_orders_stream", 10000)
+await redis_client.trim_stream("orders_stream", 10000)
 ```
 
 ### Consumer Group Monitoring
 
 ```python
 # Check consumer lag
-consumers = await redis_client.client.xinfo_consumers("pizza_orders_stream", "event_processors")
+consumers = await redis_client.client.xinfo_consumers("orders_stream", "event_processors")
 for consumer in consumers:
     print(f"Consumer {consumer['name']}: {consumer['pending']} pending messages")
 ```
@@ -232,11 +232,11 @@ for consumer in consumers:
 ### Common Issues
 
 1. **Consumer not receiving messages**
-   - Check consumer group exists: `xinfo_groups pizza_orders_stream`
+   - Check consumer group exists: `xinfo_groups orders_stream`
    - Verify consumer is reading from correct position
 
 2. **Stream growing too large**
-   - Implement trimming: `xtrim pizza_orders_stream maxlen 10000`
+   - Implement trimming: `xtrim orders_stream maxlen 10000`
    - Consider retention policies
 
 3. **Duplicate processing**
@@ -247,16 +247,16 @@ for consumer in consumers:
 
 ```bash
 # View stream contents
-redis-cli xread streams pizza_orders_stream 0
+redis-cli xread streams orders_stream 0
 
 # Check consumer groups
-redis-cli xinfo groups pizza_orders_stream
+redis-cli xinfo groups orders_stream
 
 # View pending messages
-redis-cli xpending pizza_orders_stream event_processors
+redis-cli xpending orders_stream event_processors
 
 # Monitor stream additions
-redis-cli xread block 0 streams pizza_orders_stream $
+redis-cli xread block 0 streams orders_stream $
 ```
 
 ## Future Enhancements

@@ -44,7 +44,7 @@ def test_system_state_endpoint():
         
         required_stats = [
             "total_orders", "active_deliveries", "completed_today",
-            "pending_supplier", "preparing", "ready",
+            "pending_source", "preparing", "ready",
             "dispatched", "in_transit", "delivered"
         ]
         
@@ -71,7 +71,7 @@ def test_system_state_endpoint():
         for status, orders in orders_by_status.items():
             if orders:
                 order = orders[0]
-                required_fields = ["id", "pizza_name", "supplier_name", "status"]
+                required_fields = ["id", "item_name", "source_name", "status"]
                 for field in required_fields:
                     assert field in order, f"Order missing field: {field}"
                 print_success(f"Status '{status}': {len(orders)} orders")
@@ -157,9 +157,9 @@ def test_real_time_updates():
         # Create a new order
         print_step(2, "Creating new order")
         order_data = {
-            "pizza_name": "Dashboard Test Pizza",
-            "supplier_name": "Test Supplier",
-            "supplier_price": 12.99
+            "item_name": "Dashboard Test Item",
+            "source_name": "Test Source",
+            "source_price": 12.99
         }
         response = requests.post(f"{BASE_URL}/api/orders", json=order_data)
         assert response.status_code == 200
@@ -218,9 +218,9 @@ def test_active_drivers_tracking():
         
         # Create order
         order_data = {
-            "pizza_name": "Driver Test Pizza",
-            "supplier_name": "Test Supplier",
-            "supplier_price": 13.99
+            "item_name": "Driver Test Item",
+            "source_name": "Test Source",
+            "source_price": 13.99
         }
         response = requests.post(f"{BASE_URL}/api/orders", json=order_data)
         order_id = response.json()["order"]["id"]
@@ -235,7 +235,7 @@ def test_active_drivers_tracking():
         # Accept as customer
         requests.post(
             f"{BASE_URL}/api/orders/{order_id}/customer-accept",
-            params={"customer_name": "Test Customer", "delivery_address": "Test Address"}
+            params={"buyer_name": "Test Customer", "delivery_address": "Test Address"}
         )
         
         # Prepare

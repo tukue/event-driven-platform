@@ -1,46 +1,46 @@
 import pytest
-from models import PizzaOrder, OrderStatus, OrderEvent
+from models import Order, OrderStatus, OrderEvent
 from datetime import datetime
 
 # These tests don't need Redis - they're pure unit tests
 pytestmark = pytest.mark.unit
 
-def test_pizza_order_creation():
-    """Test creating a pizza order"""
-    order = PizzaOrder(
-        supplier_name="Test Pizza",
-        pizza_name="Margherita",
-        supplier_price=10.0,
+def test_order_creation():
+    """Test creating an order"""
+    order = Order(
+        source_name="Test Source",
+        item_name="Test Item",
+        source_price=10.0,
         markup_percentage=30.0
     )
     
-    assert order.supplier_name == "Test Pizza"
-    assert order.pizza_name == "Margherita"
-    assert order.supplier_price == 10.0
+    assert order.source_name == "Test Source"
+    assert order.item_name == "Test Item"
+    assert order.source_price == 10.0
     assert order.markup_percentage == 30.0
 
-def test_pizza_order_with_customer():
-    """Test order with customer details"""
-    order = PizzaOrder(
-        supplier_name="Test Pizza",
-        pizza_name="Margherita",
-        supplier_price=10.0,
+def test_order_with_buyer():
+    """Test order with buyer details"""
+    order = Order(
+        source_name="Test Source",
+        item_name="Test Item",
+        source_price=10.0,
         markup_percentage=30.0,
-        customer_name="John Doe",
+        buyer_name="John Doe",
         delivery_address="123 Main St",
-        customer_price=13.0
+        buyer_price=13.0
     )
     
-    assert order.customer_name == "John Doe"
+    assert order.buyer_name == "John Doe"
     assert order.delivery_address == "123 Main St"
-    assert order.customer_price == 13.0
+    assert order.buyer_price == 13.0
 
 def test_order_event_creation():
     """Test creating an order event"""
-    order = PizzaOrder(
-        supplier_name="Test Pizza",
-        pizza_name="Margherita",
-        supplier_price=10.0
+    order = Order(
+        source_name="Test Source",
+        item_name="Test Item",
+        source_price=10.0
     )
     
     event = OrderEvent(
@@ -50,14 +50,14 @@ def test_order_event_creation():
     )
     
     assert event.event_type == "order.created"
-    assert event.order.pizza_name == "Margherita"
+    assert event.order.item_name == "Test Item"
     assert isinstance(event.timestamp, datetime)
 
 def test_order_status_enum():
     """Test order status enum values"""
-    assert OrderStatus.PENDING_SUPPLIER == "pending_supplier"
-    assert OrderStatus.SUPPLIER_ACCEPTED == "supplier_accepted"
-    assert OrderStatus.CUSTOMER_ACCEPTED == "customer_accepted"
+    assert OrderStatus.PENDING_SOURCE == "pending_source"
+    assert OrderStatus.SOURCE_ACCEPTED == "source_accepted"
+    assert OrderStatus.BUYER_ACCEPTED == "buyer_accepted"
     assert OrderStatus.PREPARING == "preparing"
     assert OrderStatus.READY == "ready"
     assert OrderStatus.DISPATCHED == "dispatched"

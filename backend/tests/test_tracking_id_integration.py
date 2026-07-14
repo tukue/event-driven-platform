@@ -31,20 +31,20 @@ async def test_order_creation_generates_tracking_ids(client):
     assert order["tracking_id"] is not None
     assert order["source_tracking_id"] is not None
     
-    # Verify tracking ID format (ORD-YYYY-NNNNNN)
+    # Verify tracking ID format (ORD-YYYY-XXXXXXXX)
     tracking_id = order["tracking_id"]
     assert tracking_id.startswith("ORD-")
     parts = tracking_id.split("-")
     assert len(parts) == 3
     assert len(parts[1]) == 4  # Year
-    assert len(parts[2]) == 6  # 6-digit number
+    assert len(parts[2]) == 8  # 8-hex-char unique suffix
     
-    # Verify source tracking ID format (PREFIX-NNNN)
+    # Verify source tracking ID format (PREFIX-XXXXXXXX)
     source_tracking_id = order["source_tracking_id"]
     assert "-" in source_tracking_id
-    prefix, number = source_tracking_id.split("-")
+    prefix, suffix = source_tracking_id.split("-")
     assert len(prefix) <= 3  # Max 3 letters
-    assert len(number) == 4  # 4-digit number
+    assert len(suffix) == 8  # 8-hex-char unique suffix
     assert prefix == "QM"  # Quick Mart -> QM
 
 

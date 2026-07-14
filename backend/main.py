@@ -143,7 +143,7 @@ async def get_delivery_info(order_id: str):
 
 @app.get("/api/track/{tracking_id}")
 async def track_by_tracking_id(tracking_id: str):
-    """Track order using human-readable tracking ID (e.g., ORD-2024-001234)"""
+    """Track order using human-readable tracking ID (e.g., ORD-2026-A3F7B2C1)"""
     try:
         order = await order_service.get_order_by_tracking_id(tracking_id)
         if not order:

@@ -18,7 +18,7 @@ class OrderStatus(str, Enum):
 
 class Order(BaseModel):
     id: Optional[str] = None
-    tracking_id: Optional[str] = None  # Human-readable tracking ID (e.g., "ORD-2024-001234")
+    tracking_id: Optional[str] = None  # Human-readable tracking ID (e.g., "ORD-2026-A3F7B2C1")
     source_tracking_id: Optional[str] = None  # Source-specific tracking ID
     source_name: str
     item_name: str

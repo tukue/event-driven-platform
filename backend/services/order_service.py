@@ -188,23 +188,25 @@ class OrderService:
     def _generate_tracking_id(self) -> str:
         """
         Generate a human-readable tracking ID
-        Format: ORD-YYYY-NNNNNN (e.g., ORD-2024-001234)
+        Format: ORD-YYYY-XXXXXXXX (e.g., ORD-2026-A3F7B2C1)
+        Uses UUID hex segment for collision-free uniqueness.
         """
         year = datetime.utcnow().year
-        number = random.randint(100000, 999999)
-        return f"ORD-{year}-{number}"
+        unique_suffix = uuid.uuid4().hex[:8].upper()
+        return f"ORD-{year}-{unique_suffix}"
     
     def _generate_source_tracking_id(self, source_name: str) -> str:
         """
         Generate a source-specific tracking ID
-        Format: SOURCE_PREFIX-NNNN (e.g., PP-1234 for Quick Mart)
+        Format: SOURCE_PREFIX-XXXXXXXX (e.g., QM-A3F7B2C1 for Quick Mart)
+        Uses UUID hex segment for collision-free uniqueness.
         """
         words = source_name.upper().split()
         prefix = ''.join(word[0] for word in words[:3])
         
-        number = random.randint(1000, 9999)
+        unique_suffix = uuid.uuid4().hex[:8].upper()
         
-        return f"{prefix}-{number}"
+        return f"{prefix}-{unique_suffix}"
     
     def _generate_correlation_id(self) -> str:
         """Generate a unique correlation ID for event batching"""

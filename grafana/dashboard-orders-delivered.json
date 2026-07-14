@@ -1,7 +1,7 @@
 {
   "dashboard": {
-    "title": "Pizza Delivery Orders - Delivered Analytics",
-    "tags": ["pizza", "delivery", "orders"],
+    "title": "Order Delivery Analytics",
+    "tags": ["delivery", "orders"],
     "timezone": "browser",
     "schemaVersion": 16,
     "version": 0,
@@ -14,7 +14,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
         "targets": [
           {
-            "expr": "pizza_orders_delivered",
+            "expr": "orders_delivered",
             "refId": "A"
           }
         ],
@@ -50,7 +50,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
         "targets": [
           {
-            "expr": "pizza_delivery_rate_percent",
+            "expr": "delivery_rate_percent",
             "refId": "A"
           }
         ],
@@ -81,7 +81,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
         "targets": [
           {
-            "expr": "pizza_orders_in_transit",
+            "expr": "orders_in_transit",
             "refId": "A"
           }
         ],
@@ -108,7 +108,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
         "targets": [
           {
-            "expr": "pizza_orders_dispatched",
+            "expr": "orders_dispatched",
             "refId": "A"
           }
         ],
@@ -129,17 +129,17 @@
         "gridPos": {"h": 9, "w": 24, "x": 0, "y": 8},
         "targets": [
           {
-            "expr": "pizza_delivered_today",
+            "expr": "delivered_today",
             "legendFormat": "Today",
             "refId": "A"
           },
           {
-            "expr": "pizza_delivered_week",
+            "expr": "delivered_week",
             "legendFormat": "Last 7 Days",
             "refId": "B"
           },
           {
-            "expr": "pizza_delivered_month",
+            "expr": "delivered_month",
             "legendFormat": "Last 30 Days",
             "refId": "C"
           }
@@ -160,12 +160,12 @@
       },
       {
         "id": 6,
-        "title": "Deliveries by Supplier",
+        "title": "Deliveries by Source",
         "type": "piechart",
         "gridPos": {"h": 9, "w": 12, "x": 0, "y": 17},
         "targets": [
           {
-            "expr": "pizza_delivered_by_supplier",
+            "expr": "delivered_by_source",
             "refId": "A"
           }
         ],
@@ -182,7 +182,7 @@
         "gridPos": {"h": 9, "w": 12, "x": 12, "y": 17},
         "targets": [
           {
-            "expr": "pizza_delivered_by_driver",
+            "expr": "delivered_by_driver",
             "refId": "A"
           }
         ],

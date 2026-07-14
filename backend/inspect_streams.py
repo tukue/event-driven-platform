@@ -70,7 +70,7 @@ class StreamInspector:
                         order = event_data['order']
                         print(f"Order ID: {order.get('id', 'N/A')}")
                         print(f"Status: {order.get('status', 'N/A')}")
-                        print(f"Pizza: {order.get('pizza_name', 'N/A')}")
+                        print(f"Item: {order.get('item_name', 'N/A')}")
                 except:
                     print(f"Raw Data: {data.get('data', 'N/A')[:200]}...")
 

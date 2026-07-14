@@ -14,11 +14,11 @@
    - 📦 Total Orders (blue)
    - 🚚 Active Deliveries (orange)
    - ✅ Completed Today (green)
-   - ⏳ Pending Supplier (purple)
+   - ⏳ Pending Source (purple)
 
 3. **Status Breakdown** - Grid showing counts for:
    - 👨‍🍳 Preparing
-   - 🍕 Ready
+   - 📦 Ready
    - 📦 Dispatched
    - 🚗 In Transit
    - 🎉 Delivered
@@ -97,7 +97,7 @@ Expected response:
     "total_orders": 10,
     "active_deliveries": 3,
     "completed_today": 2,
-    "pending_supplier": 1,
+    "pending_source": 1,
     "preparing": 2,
     "ready": 1,
     "dispatched": 2,

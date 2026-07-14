@@ -13,7 +13,7 @@ All components for Grafana visualization of event-driven platform orders have be
    - Calculates delivery statistics
    - Generates Prometheus format metrics
    - Generates JSON format metrics
-   - Tracks suppliers and drivers
+   - Tracks sources and drivers
    - Hourly distribution analysis
 
 2. **API Endpoints** (`backend/main.py`)
@@ -35,7 +35,7 @@ All components for Grafana visualization of event-driven platform orders have be
    - Creates 76 sample orders
    - 50 delivered orders (30-day history)
    - Various order states
-   - Multiple suppliers and drivers
+   - Multiple sources and drivers
 
 5. **Endpoint Tester** (`backend/test_grafana_metrics.py`)
    - Tests Prometheus endpoint
@@ -134,8 +134,8 @@ Your dashboard includes:
    - Last 30 days
    - Smooth line graph
 
-6. **Deliveries by Supplier** (Pie Chart)
-   - Distribution across suppliers
+6. **Deliveries by Source** (Pie Chart)
+   - Distribution across sources
    - Percentage breakdown
 
 7. **Deliveries by Driver** (Bar Chart)
@@ -145,20 +145,20 @@ Your dashboard includes:
 ## 🎯 Metrics Available
 
 ### Summary Metrics
-- `pizza_orders_total` - All orders
-- `pizza_orders_delivered` - Completed deliveries
-- `pizza_orders_in_transit` - Currently delivering
-- `pizza_orders_dispatched` - Assigned to drivers
-- `pizza_delivery_rate_percent` - Success rate
+- `orders_total` - All orders
+- `orders_delivered` - Completed deliveries
+- `orders_in_transit` - Currently delivering
+- `orders_dispatched` - Assigned to drivers
+- `delivery_rate_percent` - Success rate
 
 ### Time-Based Metrics
-- `pizza_delivered_today` - Today's count
-- `pizza_delivered_week` - Last 7 days
-- `pizza_delivered_month` - Last 30 days
+- `delivered_today` - Today's count
+- `delivered_week` - Last 7 days
+- `delivered_month` - Last 30 days
 
 ### Labeled Metrics
-- `pizza_delivered_by_supplier{supplier="..."}` - Per supplier
-- `pizza_delivered_by_driver{driver="..."}` - Per driver
+- `delivered_by_source{source="..."}` - Per source
+- `delivered_by_driver{driver="..."}` - Per driver
 
 ## 🧪 Testing
 
@@ -220,7 +220,7 @@ project/
 ### Comprehensive Analytics
 - 10+ different metrics
 - Multiple time ranges
-- Supplier/driver breakdowns
+- Source/driver breakdowns
 
 ### Easy Setup
 - One-command test data generation
@@ -330,7 +330,7 @@ You'll know it's working when:
 
 ## 🏆 Congratulations!
 
-You now have a complete, production-ready metrics and visualization system for your pizza delivery platform!
+You now have a complete, production-ready metrics and visualization system for your order delivery platform!
 
 ### What You Achieved
 - ✅ Implemented metrics collection
@@ -340,7 +340,7 @@ You now have a complete, production-ready metrics and visualization system for y
 - ✅ Documented everything
 
 ### Ready for Production
-With minor security enhancements (authentication, HTTPS), this system is ready to deploy and monitor real pizza deliveries!
+With minor security enhancements (authentication, HTTPS), this system is ready to deploy and monitor real order deliveries!
 
 ---
 

@@ -5,10 +5,10 @@ from enum import Enum
 
 class OrderStatus(str, Enum):
     CREATED = "created"
-    PENDING_SUPPLIER = "pending_supplier"
-    SUPPLIER_ACCEPTED = "supplier_accepted"
-    SUPPLIER_REJECTED = "supplier_rejected"
-    CUSTOMER_ACCEPTED = "customer_accepted"
+    PENDING_SOURCE = "pending_source"
+    SOURCE_ACCEPTED = "source_accepted"
+    SOURCE_REJECTED = "source_rejected"
+    BUYER_ACCEPTED = "buyer_accepted"
     PREPARING = "preparing"
     READY = "ready"
     DISPATCHED = "dispatched"
@@ -16,27 +16,27 @@ class OrderStatus(str, Enum):
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
 
-class PizzaOrder(BaseModel):
+class Order(BaseModel):
     id: Optional[str] = None
-    tracking_id: Optional[str] = None  # Human-readable tracking ID (e.g., "PIZZA-2024-001234")
-    supplier_tracking_id: Optional[str] = None  # Supplier-specific tracking ID
-    supplier_name: str
-    pizza_name: str
-    supplier_price: float
-    customer_price: Optional[float] = None
+    tracking_id: Optional[str] = None  # Human-readable tracking ID (e.g., "ORD-2024-001234")
+    source_tracking_id: Optional[str] = None  # Source-specific tracking ID
+    source_name: str
+    item_name: str
+    source_price: float
+    buyer_price: Optional[float] = None
     markup_percentage: float = 30.0
     status: OrderStatus = OrderStatus.CREATED
-    customer_name: Optional[str] = None
+    buyer_name: Optional[str] = None
     delivery_address: Optional[str] = None
     driver_name: Optional[str] = None
     estimated_delivery_time: Optional[int] = None  # minutes
-    supplier_notes: Optional[str] = None
+    source_notes: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
 class OrderEvent(BaseModel):
     event_type: str
-    order: PizzaOrder
+    order: Order
     timestamp: datetime
     correlation_id: Optional[str] = None
 
@@ -52,7 +52,7 @@ class DeliveryInfo(BaseModel):
     status: str
     driver_name: Optional[str] = None
     delivery_address: Optional[str] = None
-    customer_name: Optional[str] = None
+    buyer_name: Optional[str] = None
     progress_percentage: int
     estimated_arrival_minutes: Optional[int] = None
     timeline: list[DeliveryTimeline]
@@ -63,7 +63,7 @@ class SystemStatistics(BaseModel):
     total_orders: int
     active_deliveries: int
     completed_today: int
-    pending_supplier: int
+    pending_source: int
     preparing: int
     ready: int
     dispatched: int

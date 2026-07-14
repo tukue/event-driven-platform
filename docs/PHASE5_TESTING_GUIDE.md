@@ -161,7 +161,7 @@ tests/test_system_dashboard_integration.py::test_orders_by_status_structure PASS
    - [ ] Total Orders card shows correct count
    - [ ] Active Deliveries card shows correct count
    - [ ] Completed Today card shows correct count
-   - [ ] Pending Supplier card shows correct count
+   - [ ] Pending Source card shows correct count
    - [ ] Cards have hover effects
 
 3. **Status Breakdown**
@@ -225,7 +225,7 @@ tests/test_system_dashboard_integration.py::test_orders_by_status_structure PASS
 5. Switch back to Dashboard
 6. Verify:
    - Total orders increased by 1
-   - Order appears in "Pending Supplier" section
+   - Order appears in "Pending Source" section
    - Notification toast appeared
    - Last updated timestamp changed
 ```
@@ -233,8 +233,8 @@ tests/test_system_dashboard_integration.py::test_orders_by_status_structure PASS
 ### Scenario 2: Complete Delivery Flow
 ```
 1. Create order in Marketplace
-2. Accept as supplier
-3. Accept as customer
+2. Accept as source
+3. Accept as buyer
 4. Mark as preparing
 5. Mark as ready
 6. Dispatch with driver
@@ -279,7 +279,7 @@ tests/test_system_dashboard_integration.py::test_orders_by_status_structure PASS
 for i in {1..50}; do
   curl -X POST http://localhost:8000/api/orders \
     -H "Content-Type: application/json" \
-    -d "{\"pizza_name\":\"Test $i\",\"supplier_name\":\"Supplier\",\"supplier_price\":12.99}"
+    -d "{\"item_name\":\"Test $i\",\"source_name\":\"Source\",\"source_price\":12.99}"
 done
 
 # Check dashboard performance

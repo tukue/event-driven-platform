@@ -89,9 +89,9 @@ async def test_phase_1_delivery_endpoint():
         create_response = await client.post(
             "/api/orders",
             json={
-                "supplier_name": "Test Pizza Palace",
-                "pizza_name": "Margherita Supreme",
-                "supplier_price": 15.0,
+                "source_name": "Test Quick Mart",
+                "item_name": "Electronics Bundle",
+                "source_price": 15.0,
                 "markup_percentage": 30.0
             }
         )
@@ -121,7 +121,7 @@ async def test_phase_1_delivery_endpoint():
         # Customer accepts
         customer_response = await client.post(
             f"/api/orders/{order_id}/customer-accept",
-            params={"customer_name": "John Doe", "delivery_address": "123 Test Street"}
+            params={"buyer_name": "John Doe", "delivery_address": "123 Test Street"}
         )
         if customer_response.status_code != 200:
             print(f"❌ Customer accept failed: {customer_response.status_code}")
@@ -164,7 +164,7 @@ async def test_phase_1_delivery_endpoint():
         # Verify delivery data structure
         required_fields = [
             "order_id", "status", "driver_name", "delivery_address", 
-            "customer_name", "progress_percentage", "estimated_arrival_minutes",
+            "buyer_name", "progress_percentage", "estimated_arrival_minutes",
             "timeline", "current_stage"
         ]
         
@@ -231,9 +231,9 @@ async def test_phase_1_delivery_endpoint():
         new_order_response = await client.post(
             "/api/orders",
             json={
-                "supplier_name": "Test Pizza",
-                "pizza_name": "Test",
-                "supplier_price": 10.0,
+                "source_name": "Test Source",
+                "item_name": "Test Item",
+                "source_price": 10.0,
                 "markup_percentage": 30.0
             }
         )
@@ -286,7 +286,7 @@ async def test_phase_2_state_management():
         statistics = state_data["statistics"]
         stats_fields = [
             "total_orders", "active_deliveries", "completed_today",
-            "pending_supplier", "preparing", "ready", "dispatched", "in_transit", "delivered"
+            "pending_source", "preparing", "ready", "dispatched", "in_transit", "delivered"
         ]
         
         for field in stats_fields:

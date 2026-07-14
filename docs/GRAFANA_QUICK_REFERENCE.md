@@ -25,20 +25,20 @@ python verify_grafana_setup.py
 ## 📊 Available Metrics
 
 ### Counters
-- `pizza_orders_total` - Total orders
-- `pizza_orders_delivered` - Total delivered
-- `pizza_delivered_today` - Delivered today
-- `pizza_delivered_week` - Last 7 days
-- `pizza_delivered_month` - Last 30 days
+- `orders_total` - Total orders
+- `orders_delivered` - Total delivered
+- `delivered_today` - Delivered today
+- `delivered_week` - Last 7 days
+- `delivered_month` - Last 30 days
 
 ### Gauges
-- `pizza_orders_in_transit` - Currently in transit
-- `pizza_orders_dispatched` - Currently dispatched
-- `pizza_delivery_rate_percent` - Success rate
+- `orders_in_transit` - Currently in transit
+- `orders_dispatched` - Currently dispatched
+- `delivery_rate_percent` - Success rate
 
 ### Labels
-- `pizza_delivered_by_supplier{supplier="..."}` - By supplier
-- `pizza_delivered_by_driver{driver="..."}` - By driver
+- `delivered_by_source{source="..."}` - By source
+- `delivered_by_driver{driver="..."}` - By driver
 
 ## 🔧 Grafana Setup
 

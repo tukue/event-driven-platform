@@ -16,9 +16,9 @@ def test_complete_delivery_flow():
         # Step 1: Create order
         print("1. Creating order...")
         response = requests.post(f"{BASE_URL}/api/orders", json={
-            "pizza_name": "Margherita Test",
-            "supplier_name": "Test Pizza Palace",
-            "supplier_price": 12.99
+            "item_name": "Electronics Bundle Test",
+            "source_name": "Test Quick Mart",
+            "source_price": 12.99
         })
         assert response.status_code == 200
         order_id = response.json()["order"]["id"]
@@ -43,7 +43,7 @@ def test_complete_delivery_flow():
         print("\n4. Customer accepting order...")
         response = requests.post(
             f"{BASE_URL}/api/orders/{order_id}/customer-accept",
-            params={"customer_name": "Test Customer", "delivery_address": "123 Test St"}
+            params={"buyer_name": "Test Customer", "delivery_address": "123 Test St"}
         )
         assert response.status_code == 200
         print("   ✓ Customer accepted")

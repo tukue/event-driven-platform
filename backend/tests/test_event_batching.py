@@ -137,9 +137,9 @@ async def test_batch_dispatch_order_workflow(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Batch Test Pizza",
-            "pizza_name": "Workflow Pizza",
-            "supplier_price": 15.0,
+            "source_name": "Batch Test Source",
+            "item_name": "Workflow Item",
+            "source_price": 15.0,
             "markup_percentage": 30.0
         }
     )

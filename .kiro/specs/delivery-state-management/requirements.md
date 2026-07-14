@@ -1,12 +1,12 @@
 # Delivery State Management - Requirements
 
 ## Overview
-Enhance the pizza delivery marketplace with advanced delivery tracking, state management endpoints, and multi-event dispatching capabilities.
+Enhance the order delivery platform with advanced delivery tracking, state management endpoints, and multi-event dispatching capabilities.
 
 ## User Stories
 
 ### 1. Delivery Tracking Endpoint
-**As a** customer or dispatch manager  
+**As a** buyer or dispatch manager  
 **I want** to track delivery status in real-time  
 **So that** I can know exactly where my order is and when it will arrive
 
@@ -43,7 +43,7 @@ Enhance the pizza delivery marketplace with advanced delivery tracking, state ma
 - 3.5 Failed batch publishes rollback event
 
 ### 4. Enhanced Frontend Delivery View
-**As a** customer  
+**As a** buyer  
 **I want** to see a visual delivery tracking interface  
 **So that** I can follow my order's journey in real-time
 
@@ -118,7 +118,7 @@ Enhance the pizza delivery marketplace with advanced delivery tracking, state ma
 - React frontend framework
 
 ## Success Metrics
-- Delivery tracking reduces customer support inquiries by 30%
+- Delivery tracking reduces buyer support inquiries by 30%
 - State endpoint used for monitoring and debugging
 - Multi-event dispatching reduces state inconsistencies
 - Frontend provides clear visibility into order status

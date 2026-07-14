@@ -53,16 +53,16 @@ python run_tests.py integration
 ## Test Coverage
 
 ### Unit Tests (`test_models.py`)
-- ✅ Pizza order creation
-- ✅ Order with customer details
+- ✅ Order creation
+- ✅ Order with buyer details
 - ✅ Order event creation
 - ✅ Order status enum validation
 
 ### Service Tests (`test_order_service.py`)
 - ✅ Create order
-- ✅ Supplier accept/reject order
-- ✅ Customer accept order
-- ✅ Customer cannot accept before supplier
+- ✅ Source accept/reject order
+- ✅ Buyer accept order
+- ✅ Buyer cannot accept before source
 - ✅ Dispatch order
 - ✅ Complete order lifecycle (8 states)
 - ✅ Get all orders
@@ -70,8 +70,8 @@ python run_tests.py integration
 ### API Tests (`test_api.py`)
 - ✅ POST /api/orders
 - ✅ GET /api/orders
-- ✅ POST /api/orders/{id}/supplier-respond
-- ✅ POST /api/orders/{id}/customer-accept
+- ✅ POST /api/orders/{id}/source-respond
+- ✅ POST /api/orders/{id}/buyer-accept
 - ✅ POST /api/orders/{id}/dispatch
 - ✅ POST /api/orders/{id}/status
 - ✅ Invalid order ID handling
@@ -79,7 +79,7 @@ python run_tests.py integration
 ### Integration Tests (`test_integration.py`)
 - ✅ Complete order flow (creation → delivery)
 - ✅ Multiple concurrent orders
-- ✅ Supplier rejection flow
+- ✅ Source rejection flow
 - ✅ Pricing calculation with various markups
 - ✅ Order state validation
 
@@ -108,7 +108,7 @@ python test_streams.py
 ### 1. Complete Order Lifecycle
 Tests the full flow from creation to delivery:
 ```
-pending_supplier → supplier_accepted → customer_accepted → 
+pending_source → source_accepted → buyer_accepted →
 preparing → ready → dispatched → in_transit → delivered
 ```
 
@@ -121,7 +121,7 @@ Tests automatic markup calculation:
 
 ### 3. State Validation
 Tests that orders follow proper state transitions:
-- Customer cannot accept before supplier
+- Buyer cannot accept before source
 - Orders progress through valid states only
 
 ### 4. Concurrent Operations
@@ -181,10 +181,10 @@ jobs:
 tests/test_integration.py::test_complete_order_flow_integration 
 1. Creating order...
    ✓ Order created: abc-123-def
-2. Supplier accepting order...
-   ✓ Supplier accepted
-3. Customer accepting order...
-   ✓ Customer accepted (Price: $20.25)
+2. Source accepting order...
+   ✓ Source accepted
+3. Buyer accepting order...
+   ✓ Buyer accepted (Price: $20.25)
 4. Starting preparation...
    ✓ Preparing
 5. Marking as ready...
@@ -241,7 +241,7 @@ pip install pytest-asyncio
 async def test_new_feature(order_service):
     """Test description"""
     # Arrange
-    order = PizzaOrder(...)
+    order = Order(...)
     
     # Act
     result = await order_service.some_method(order)

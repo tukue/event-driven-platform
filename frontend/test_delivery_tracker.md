@@ -30,7 +30,7 @@ npm run dev
 
 ### 2. Create and Track an Order
 
-1. **Create Order**: Use SupplierPanel to create a pizza order
+1. **Create Order**: Use SupplierPanel to create an order
 2. **Accept Order**: Use CustomerPanel to accept the order
 3. **Prepare Order**: Click "Start Preparing" → "Mark Ready"
 4. **Dispatch Order**: Use DispatchPanel to assign a driver and dispatch

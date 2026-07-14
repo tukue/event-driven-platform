@@ -6,7 +6,7 @@ from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 logger = logging.getLogger(__name__)
 
 class KafkaService:
-    def __init__(self, bootstrap_servers: str, topic: str = "pizza.orders"):
+    def __init__(self, bootstrap_servers: str, topic: str = "orders"):
         self.bootstrap_servers = bootstrap_servers
         self.topic = topic
         self.producer = None
@@ -42,7 +42,7 @@ class KafkaService:
 
 
 class WebSocketBridge:
-    def __init__(self, bootstrap_servers: str, topic: str = "pizza.orders"):
+    def __init__(self, bootstrap_servers: str, topic: str = "orders"):
         self.bootstrap_servers = bootstrap_servers
         self.topic = topic
         self.consumer = None

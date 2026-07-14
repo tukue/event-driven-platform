@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class StreamConsumer:
     """Redis Streams consumer for processing events asynchronously"""
     
-    def __init__(self, stream_name: str = "pizza_orders_stream", group_name: str = "event_processors"):
+    def __init__(self, stream_name: str = "orders_stream", group_name: str = "event_processors"):
         self.stream_name = stream_name
         self.group_name = group_name
         self.consumer_name = f"consumer_{id(self)}"
@@ -36,13 +36,12 @@ class StreamConsumer:
         
         try:
             while self.running:
-                # Read messages from the stream
                 messages = await self.redis.read_stream_group(
                     self.stream_name, 
                     self.group_name, 
                     self.consumer_name,
                     count=10,
-                    block=5000  # Block for 5 seconds
+                    block=5000
                 )
                 
                 if messages:
@@ -58,7 +57,6 @@ class StreamConsumer:
                             except Exception as e:
                                 logger.error(f"Failed to process message {message_id}: {e}")
                     
-                    # Acknowledge processed messages
                     if message_ids:
                         await self.redis.acknowledge_message(
                             self.stream_name, 
@@ -66,12 +64,11 @@ class StreamConsumer:
                             message_ids
                         )
                 
-                await asyncio.sleep(0.1)  # Small delay to prevent busy waiting
+                await asyncio.sleep(0.1)
                 
         except Exception as e:
             logger.error(f"Error in stream consumer: {e}")
             if self.running:
-                # Restart consumer after error
                 await asyncio.sleep(5)
                 await self.start_consuming()
     
@@ -88,7 +85,6 @@ class StreamConsumer:
             
             logger.info(f"Processing event: {event_type} (ID: {message_id})")
             
-            # Call registered handler if available
             if event_type in self.handlers:
                 await self.handlers[event_type](event_data)
             else:
@@ -98,7 +94,7 @@ class StreamConsumer:
             logger.error(f"Failed to parse event data: {e}")
         except Exception as e:
             logger.error(f"Error processing message {message_id}: {e}")
-            raise  # Re-raise to prevent acknowledgment
+            raise
 
 class EventProcessor:
     """Example event processor that demonstrates stream consumption"""
@@ -111,32 +107,31 @@ class EventProcessor:
     def _setup_handlers(self):
         """Set up event handlers"""
         self.consumer.register_handler("order.created", self._handle_order_created)
-        self.consumer.register_handler("order.supplier_accepted", self._handle_supplier_accepted)
-        self.consumer.register_handler("order.customer_accepted", self._handle_customer_accepted)
+        self.consumer.register_handler("order.source_accepted", self._handle_source_accepted)
+        self.consumer.register_handler("order.buyer_accepted", self._handle_buyer_accepted)
         self.consumer.register_handler("order.dispatched", self._handle_order_dispatched)
         self.consumer.register_handler("order.delivered", self._handle_order_delivered)
     
     async def _handle_order_created(self, event_data: dict):
         """Handle order creation events"""
         order = event_data.get("order", {})
-        logger.info(f"Order created: {order.get('id')} - {order.get('pizza_name')} from {order.get('supplier_name')}")
+        logger.info(f"Order created: {order.get('id')} - {order.get('item_name')} from {order.get('source_name')}")
         
-        # Could trigger notifications, update metrics, etc.
         await self._update_order_metrics("created")
     
-    async def _handle_supplier_accepted(self, event_data: dict):
-        """Handle supplier acceptance events"""
+    async def _handle_source_accepted(self, event_data: dict):
+        """Handle source acceptance events"""
         order = event_data.get("order", {})
-        logger.info(f"Supplier accepted order: {order.get('id')}")
+        logger.info(f"Source accepted order: {order.get('id')}")
         
-        await self._update_order_metrics("supplier_accepted")
+        await self._update_order_metrics("source_accepted")
     
-    async def _handle_customer_accepted(self, event_data: dict):
-        """Handle customer acceptance events"""
+    async def _handle_buyer_accepted(self, event_data: dict):
+        """Handle buyer acceptance events"""
         order = event_data.get("order", {})
-        logger.info(f"Customer accepted order: {order.get('id')}")
+        logger.info(f"Buyer accepted order: {order.get('id')}")
         
-        await self._update_order_metrics("customer_accepted")
+        await self._update_order_metrics("buyer_accepted")
     
     async def _handle_order_dispatched(self, event_data: dict):
         """Handle order dispatch events"""
@@ -154,8 +149,6 @@ class EventProcessor:
     
     async def _update_order_metrics(self, event_type: str):
         """Update metrics based on event type"""
-        # This could integrate with your metrics service
-        # For now, just log the metric update
         logger.info(f"Updating metrics for event: {event_type}")
     
     async def start(self):

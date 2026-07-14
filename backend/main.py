@@ -9,7 +9,7 @@ from services.state_service import StateService, CachedStateService
 from services.metrics_service import MetricsService
 from services.stream_consumer import event_processor
 from services.kafka_service import KafkaService, WebSocketBridge
-from models import PizzaOrder, OrderStatus, EventBatch, BatchResult
+from models import Order, OrderStatus, EventBatch, BatchResult
 import asyncio
 import logging
 import json
@@ -18,7 +18,7 @@ import json
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Pizza Delivery Marketplace")
+app = FastAPI(title="Event-Driven Order Platform")
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,16 +62,14 @@ async def startup():
     state_service = CachedStateService(base_state_service, redis_client)
     metrics_service = MetricsService(redis_client)
     
-    # Start the stream consumer for event processing
     asyncio.create_task(event_processor.start())
     logger.info("Stream consumer started")
 
-    # Start Kafka integration if configured
     global kafka_service, ws_bridge
     if settings.kafka_bootstrap_servers:
         kafka_service = KafkaService(settings.kafka_bootstrap_servers, settings.kafka_topic)
         await kafka_service.start()
-        order_service.kafka = kafka_service  # inject into order service
+        order_service.kafka = kafka_service
 
         ws_bridge = WebSocketBridge(settings.kafka_bootstrap_servers, settings.kafka_topic)
         await ws_bridge.start()
@@ -89,22 +87,22 @@ async def shutdown():
     await redis_client.disconnect()
 
 @app.post("/api/orders")
-async def create_order(order: PizzaOrder):
+async def create_order(order: Order):
     event = await order_service.create_order(order)
     return event.model_dump(mode='json')
 
-@app.post("/api/orders/{order_id}/supplier-respond")
-async def supplier_respond(order_id: str, accept: bool, notes: str = None, estimated_time: int = None):
+@app.post("/api/orders/{order_id}/source-respond")
+async def source_respond(order_id: str, accept: bool, notes: str = None, estimated_time: int = None):
     try:
-        event = await order_service.supplier_respond(order_id, accept, notes, estimated_time)
+        event = await order_service.source_respond(order_id, accept, notes, estimated_time)
         return event.model_dump(mode='json')
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-@app.post("/api/orders/{order_id}/customer-accept")
-async def customer_accept(order_id: str, customer_name: str, delivery_address: str):
+@app.post("/api/orders/{order_id}/buyer-accept")
+async def buyer_accept(order_id: str, buyer_name: str, delivery_address: str):
     try:
-        event = await order_service.customer_accept(order_id, customer_name, delivery_address)
+        event = await order_service.buyer_accept(order_id, buyer_name, delivery_address)
         return event.model_dump(mode='json')
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -145,26 +143,23 @@ async def get_delivery_info(order_id: str):
 
 @app.get("/api/track/{tracking_id}")
 async def track_by_tracking_id(tracking_id: str):
-    """Track order using human-readable tracking ID (e.g., PIZZA-2024-001234)"""
+    """Track order using human-readable tracking ID (e.g., ORD-2024-001234)"""
     try:
-        # Find order by tracking_id
         order = await order_service.get_order_by_tracking_id(tracking_id)
         if not order:
             raise HTTPException(status_code=404, detail=f"Order with tracking ID {tracking_id} not found")
         
-        # If dispatched, return full delivery info
         if order["status"] in ["dispatched", "in_transit", "delivered"]:
             delivery_info = await delivery_service.get_delivery_info(order["id"])
             return delivery_info
         else:
-            # Return basic order info if not yet dispatched
             return {
                 "order_id": order["id"],
                 "tracking_id": order["tracking_id"],
-                "supplier_tracking_id": order["supplier_tracking_id"],
+                "source_tracking_id": order["source_tracking_id"],
                 "status": order["status"],
-                "supplier_name": order["supplier_name"],
-                "pizza_name": order["pizza_name"],
+                "source_name": order["source_name"],
+                "item_name": order["item_name"],
                 "created_at": order["created_at"],
                 "message": "Order not yet dispatched. Check back soon!"
             }
@@ -246,7 +241,7 @@ async def websocket_endpoint(websocket: WebSocket):
         except WebSocketDisconnect:
             ws_bridge.remove_connection(websocket)
     else:
-        pubsub = await redis_client.subscribe("pizza_orders")
+        pubsub = await redis_client.subscribe("orders")
         try:
             while True:
                 message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
@@ -254,5 +249,5 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_text(message["data"])
                 await asyncio.sleep(0.01)
         except WebSocketDisconnect:
-            await pubsub.unsubscribe("pizza_orders")
+            await pubsub.unsubscribe("orders")
             await pubsub.close()

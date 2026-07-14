@@ -7,55 +7,55 @@ async def test_complete_order_flow_integration(client):
     Integration test: Complete order flow from creation to delivery
     Tests the entire system end-to-end
     """
-    # Step 1: Supplier creates order
+    # Step 1: Source creates order
     print("\n1. Creating order...")
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Integration Test Pizza",
-            "pizza_name": "Supreme",
-            "supplier_price": 15.0,
+            "source_name": "Integration Test Source",
+            "item_name": "Electronics Bundle",
+            "source_price": 15.0,
             "markup_percentage": 35.0
         }
     )
     assert create_response.status_code == 200
     order_data = create_response.json()
     order_id = order_data["order"]["id"]
-    assert order_data["order"]["status"] == "pending_supplier"
+    assert order_data["order"]["status"] == "pending_source"
     print(f"   ✓ Order created: {order_id}")
     
-    # Step 2: Supplier accepts order
-    print("2. Supplier accepting order...")
-    supplier_response = await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+    # Step 2: Source accepts order
+    print("2. Source accepting order...")
+    source_response = await client.post(
+        f"/api/orders/{order_id}/source-respond",
         params={
             "accept": True,
             "notes": "Premium ingredients",
             "estimated_time": 35
         }
     )
-    assert supplier_response.status_code == 200
-    supplier_data = supplier_response.json()
-    assert supplier_data["order"]["status"] == "supplier_accepted"
-    assert supplier_data["order"]["supplier_notes"] == "Premium ingredients"
-    assert supplier_data["order"]["estimated_delivery_time"] == 35
-    print("   ✓ Supplier accepted")
+    assert source_response.status_code == 200
+    source_data = source_response.json()
+    assert source_data["order"]["status"] == "source_accepted"
+    assert source_data["order"]["source_notes"] == "Premium ingredients"
+    assert source_data["order"]["estimated_delivery_time"] == 35
+    print("   ✓ Source accepted")
     
-    # Step 3: Customer accepts order
-    print("3. Customer accepting order...")
-    customer_response = await client.post(
-        f"/api/orders/{order_id}/customer-accept",
+    # Step 3: Buyer accepts order
+    print("3. Buyer accepting order...")
+    buyer_response = await client.post(
+        f"/api/orders/{order_id}/buyer-accept",
         params={
-            "customer_name": "Integration Test Customer",
+            "buyer_name": "Integration Test Buyer",
             "delivery_address": "789 Integration Ave"
         }
     )
-    assert customer_response.status_code == 200
-    customer_data = customer_response.json()
-    assert customer_data["order"]["status"] == "customer_accepted"
-    assert customer_data["order"]["customer_name"] == "Integration Test Customer"
-    assert customer_data["order"]["customer_price"] == 20.25  # 15 + 35%
-    print(f"   ✓ Customer accepted (Price: ${customer_data['order']['customer_price']})")
+    assert buyer_response.status_code == 200
+    buyer_data = buyer_response.json()
+    assert buyer_data["order"]["status"] == "buyer_accepted"
+    assert buyer_data["order"]["buyer_name"] == "Integration Test Buyer"
+    assert buyer_data["order"]["buyer_price"] == 20.25  # 15 + 35%
+    print(f"   ✓ Buyer accepted (Price: ${buyer_data['order']['buyer_price']})")
     
     # Step 4: Start preparing
     print("4. Starting preparation...")
@@ -119,10 +119,10 @@ async def test_complete_order_flow_integration(client):
     completed_order = next((o for o in orders if o["id"] == order_id), None)
     assert completed_order is not None
     assert completed_order["status"] == "delivered"
-    assert completed_order["supplier_name"] == "Integration Test Pizza"
-    assert completed_order["customer_name"] == "Integration Test Customer"
+    assert completed_order["source_name"] == "Integration Test Source"
+    assert completed_order["buyer_name"] == "Integration Test Buyer"
     assert completed_order["driver_name"] == "Integration Test Driver"
-    assert completed_order["customer_price"] == 20.25
+    assert completed_order["buyer_price"] == 20.25
     print("   ✓ Final state verified")
     
     print("\n✅ Complete integration test passed!")
@@ -136,9 +136,9 @@ async def test_multiple_orders_concurrent(client):
         task = client.post(
             "/api/orders",
             json={
-                "supplier_name": f"Concurrent Pizza {i}",
-                "pizza_name": f"Pizza Type {i}",
-                "supplier_price": 10.0 + i,
+                "source_name": f"Concurrent Source {i}",
+                "item_name": f"Item Type {i}",
+                "source_price": 10.0 + i,
                 "markup_percentage": 30.0
             }
         )
@@ -157,23 +157,23 @@ async def test_multiple_orders_concurrent(client):
     assert len(orders) >= 5
 
 @pytest.mark.asyncio
-async def test_supplier_rejection_flow(client):
-    """Test order flow when supplier rejects"""
+async def test_source_rejection_flow(client):
+    """Test order flow when source rejects"""
     # Create order
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
-    # Supplier rejects
+    # Source rejects
     reject_response = await client.post(
-        f"/api/orders/{order_id}/supplier-respond",
+        f"/api/orders/{order_id}/source-respond",
         params={
             "accept": False,
             "notes": "Out of stock"
@@ -182,19 +182,19 @@ async def test_supplier_rejection_flow(client):
     
     assert reject_response.status_code == 200
     reject_data = reject_response.json()
-    assert reject_data["order"]["status"] == "supplier_rejected"
-    assert reject_data["order"]["supplier_notes"] == "Out of stock"
+    assert reject_data["order"]["status"] == "source_rejected"
+    assert reject_data["order"]["source_notes"] == "Out of stock"
     
-    # Customer should not be able to accept rejected order
-    customer_response = await client.post(
-        f"/api/orders/{order_id}/customer-accept",
+    # Buyer should not be able to accept rejected order
+    buyer_response = await client.post(
+        f"/api/orders/{order_id}/buyer-accept",
         params={
-            "customer_name": "John Doe",
+            "buyer_name": "John Doe",
             "delivery_address": "123 Main St"
         }
     )
     
-    assert customer_response.status_code == 400
+    assert buyer_response.status_code == 400
 
 @pytest.mark.asyncio
 async def test_pricing_calculation(client):
@@ -211,22 +211,22 @@ async def test_pricing_calculation(client):
         create_response = await client.post(
             "/api/orders",
             json={
-                "supplier_name": "Test Pizza",
-                "pizza_name": "Test",
-                "supplier_price": base_price,
+                "source_name": "Test Source",
+                "item_name": "Test",
+                "source_price": base_price,
                 "markup_percentage": markup
             }
         )
         order_id = create_response.json()["order"]["id"]
         
-        await client.post(f"/api/orders/{order_id}/supplier-respond", params={"accept": True})
+        await client.post(f"/api/orders/{order_id}/source-respond", params={"accept": True})
         
-        customer_response = await client.post(
-            f"/api/orders/{order_id}/customer-accept",
-            params={"customer_name": "Test", "delivery_address": "Test St"}
+        buyer_response = await client.post(
+            f"/api/orders/{order_id}/buyer-accept",
+            params={"buyer_name": "Test", "delivery_address": "Test St"}
         )
         
-        actual_price = customer_response.json()["order"]["customer_price"]
+        actual_price = buyer_response.json()["order"]["buyer_price"]
         assert actual_price == expected_price, f"Expected ${expected_price}, got ${actual_price}"
 
 @pytest.mark.asyncio
@@ -236,18 +236,18 @@ async def test_order_state_validation(client):
     create_response = await client.post(
         "/api/orders",
         json={
-            "supplier_name": "Test Pizza",
-            "pizza_name": "Margherita",
-            "supplier_price": 10.0,
+            "source_name": "Test Source",
+            "item_name": "Test Item",
+            "source_price": 10.0,
             "markup_percentage": 30.0
         }
     )
     order_id = create_response.json()["order"]["id"]
     
     # Try to skip states (should work but not recommended)
-    # Customer cannot accept before supplier
-    customer_response = await client.post(
-        f"/api/orders/{order_id}/customer-accept",
-        params={"customer_name": "John", "delivery_address": "123 St"}
+    # Buyer cannot accept before source
+    buyer_response = await client.post(
+        f"/api/orders/{order_id}/buyer-accept",
+        params={"buyer_name": "John", "delivery_address": "123 St"}
     )
-    assert customer_response.status_code == 400  # Should fail
+    assert buyer_response.status_code == 400  # Should fail

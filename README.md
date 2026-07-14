@@ -1,18 +1,18 @@
-# Event-Driven Pizza Delivery Platform
+# Event-Driven Order Delivery Platform
 
-A **real-time, event-driven order management marketplace** demonstrating enterprise-grade architectural patterns with React, FastAPI, and Redis Cloud. Supports a complete pizza delivery lifecycle across **Supplier**, **Customer**, and **Dispatch** roles with live WebSocket synchronization, Redis Streams for event persistence, and Grafana-exportable metrics.
+A **real-time, event-driven order management marketplace** demonstrating enterprise-grade architectural patterns with React, FastAPI, and Redis Cloud. Supports a complete order delivery lifecycle across **Source**, **Buyer**, and **Dispatch** roles with live WebSocket synchronization, Redis Streams for event persistence, and Grafana-exportable metrics.
 
 ---
 
 ## Business Problem
 
-Small and medium pizza businesses lack affordable, real-time order management systems. Existing solutions are either:
+Small and medium order businesses lack affordable, real-time order management systems. Existing solutions are either:
 
 - **Monolithic POS systems** — expensive, closed, single-location only
 - **Generic delivery apps** — take 20-30% commission per order, no supplier-branding control
 - **Manual workflows** — phone/paper-based, error-prone, no visibility
 
-This platform demonstrates how **event-driven architecture** solves marketplace coordination challenges: three independent roles (supplier, customer, dispatch) need to observe and react to the same order state in real-time without tight coupling. Redis Pub/Sub provides instant broadcast, Redis Streams provides durable audit, and the dual-write pattern gives both without sacrificing either.
+This platform demonstrates how **event-driven architecture** solves marketplace coordination challenges: three independent roles (source, buyer, dispatch) need to observe and react to the same order state in real-time without tight coupling. Redis Pub/Sub provides instant broadcast, Redis Streams provides durable audit, and the dual-write pattern gives both without sacrificing either.
 
 ---
 
@@ -39,7 +39,7 @@ graph TB
 
     subgraph Frontend["Presentation Layer — React SPA (Vite)"]
         SP["SupplierPanel<br/><i>create, accept, reject</i>"]
-        CP["CustomerPanel<br/><i>browse, accept orders</i>"]
+        CP["BuyerPanel<br/><i>browse, accept orders</i>"]
         DP["DispatchPanel<br/><i>assign drivers</i>"]
         OP["OrdersPanel<br/><i>status controls</i>"]
         DT["DeliveryTracker<br/><i>progress stepper, ETA</i>"]
@@ -59,8 +59,8 @@ graph TB
 
     subgraph Redis["Data & Messaging Layer — Redis Cloud"]
         KV[("KV Store<br/><i>order:{uuid} → JSON</i>")]
-        PS[("Pub/Sub<br/><i>pizza_orders channel</i>")]
-        ST[("Streams<br/><i>pizza_orders_stream</i>")]
+        PS[("Pub/Sub<br/><i>orders channel</i>")]
+        ST[("Streams<br/><i>orders_stream</i>")]
         CA[("Cache<br/><i>state_cache:* (5s TTL)</i>")]
     end
 
@@ -114,11 +114,11 @@ sequenceDiagram
     participant SC as StreamConsumer
     participant WS as WebSocket
 
-    Client->>API: POST /api/orders {pizza_name, supplier_name, price}
+    Client->>API: POST /api/orders {item_name, source_name, price}
     API->>OS: create_order()
     OS->>KV: SET order:{uuid} → JSON
-    OS->>PS: PUBLISH pizza_orders event
-    OS->>ST: XADD pizza_orders_stream *
+    OS->>PS: PUBLISH orders event
+    OS->>ST: XADD orders_stream *
     OS-->>API: return OrderEvent
     API-->>Client: 200 {order_id, status, tracking_id}
     
@@ -136,12 +136,12 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> pending_supplier: Order Created
-    pending_supplier --> supplier_accepted: Accept
-    pending_supplier --> supplier_rejected: Reject
-    supplier_accepted --> customer_accepted: Customer Accepts
-    customer_accepted --> preparing: Start Prep
-    preparing --> ready: Pizza Ready
+    [*] --> pending_source: Order Created
+    pending_source --> source_accepted: Accept
+    pending_source --> source_rejected: Reject
+    source_accepted --> buyer_accepted: Buyer Accepts
+    buyer_accepted --> preparing: Start Prep
+    preparing --> ready: Order Ready
     ready --> dispatched: Driver Assigned
     dispatched --> in_transit: In Transit
     in_transit --> delivered: Delivered
@@ -208,7 +208,7 @@ stateDiagram-v2
 ```
 ├── backend/
 │   ├── main.py                          # FastAPI app: 13 REST endpoints + WebSocket
-│   ├── models.py                        # 9 Pydantic models (PizzaOrder, OrderEvent, etc.)
+│   ├── models.py                        # 9 Pydantic models (Order, OrderEvent, etc.)
 │   ├── config.py                        # pydantic-settings (.env -> config)
 │   ├── redis_client.py                  # Async Redis wrapper (KV, Pub/Sub, Streams)
 │   ├── services/
@@ -224,7 +224,7 @@ stateDiagram-v2
 │   │   ├── hooks/useWebSocket.js        # Auto-reconnect WebSocket hook
 │   │   └── components/
 │   │       ├── SupplierPanel.jsx        # Create + accept/reject orders
-│   │       ├── CustomerPanel.jsx        # Browse + accept with delivery details
+│   │       ├── BuyerPanel.jsx        # Browse + accept with delivery details
 │   │       ├── DispatchPanel.jsx        # Assign drivers to ready orders
 │   │       ├── OrdersPanel.jsx          # Full order list + status controls
 │   │       ├── DeliveryTracker.jsx      # Modal: progress stepper, ETA, driver card
@@ -275,9 +275,9 @@ open http://localhost:8000/docs
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/orders` | Create a new pizza order |
-| `POST` | `/api/orders/{id}/supplier-respond` | Supplier accepts/rejects |
-| `POST` | `/api/orders/{id}/customer-accept` | Customer accepts with details |
+| `POST` | `/api/orders` | Create a new order |
+| `POST` | `/api/orders/{id}/source-respond` | Source accepts/rejects |
+| `POST` | `/api/orders/{id}/buyer-accept` | Buyer accepts with details |
 | `POST` | `/api/orders/{id}/dispatch` | Assign driver to ready order |
 | `POST` | `/api/orders/{id}/status` | Update status (preparing/ready/in_transit/delivered) |
 | `GET` | `/api/orders` | List all orders |

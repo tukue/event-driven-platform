@@ -74,10 +74,10 @@
     "total_orders": 150,
     "active_deliveries": 12,
     "completed_today": 45,
-    "pending_supplier": 3
+    "pending_source": 3
   },
   "orders_by_status": {
-    "pending_supplier": [...],
+    "pending_source": [...],
     "in_transit": [...],
     "ready": [...]
   },
@@ -103,7 +103,7 @@ async def dispatch_events(self, events: List[OrderEvent], correlation_id: str = 
         for event in events:
             event_data = event.model_dump(mode='json')
             event_data['correlation_id'] = correlation_id
-            await self.redis.publish("pizza_orders", json.dumps(event_data))
+            await self.redis.publish("orders", json.dumps(event_data))
         
         return {"success": True, "correlation_id": correlation_id}
     except Exception as e:
@@ -113,7 +113,7 @@ async def dispatch_events(self, events: List[OrderEvent], correlation_id: str = 
             "correlation_id": correlation_id,
             "error": str(e)
         }
-        await self.redis.publish("pizza_orders", json.dumps(rollback_event))
+        await self.redis.publish("orders", json.dumps(rollback_event))
         raise
 ```
 
@@ -133,7 +133,7 @@ class DeliveryInfo(BaseModel):
 class SystemState(BaseModel):
     timestamp: datetime
     statistics: Dict[str, int]
-    orders_by_status: Dict[str, List[PizzaOrder]]
+    orders_by_status: Dict[str, List[Order]]
     active_drivers: List[Dict[str, Any]]
 ```
 
@@ -154,10 +154,10 @@ class DeliveryService:
     async def get_delivery_info(self, order_id: str) -> DeliveryInfo:
         """Get delivery tracking information"""
         
-    async def calculate_progress(self, order: PizzaOrder) -> int:
+    async def calculate_progress(self, order: Order) -> int:
         """Calculate delivery progress percentage"""
         
-    async def estimate_arrival(self, order: PizzaOrder) -> datetime:
+    async def estimate_arrival(self, order: Order) -> datetime:
         """Estimate delivery arrival time"""
 ```
 
@@ -171,7 +171,7 @@ class StateService:
     async def get_statistics(self) -> Dict[str, int]:
         """Calculate system statistics"""
         
-    async def get_orders_by_status(self) -> Dict[str, List[PizzaOrder]]:
+    async def get_orders_by_status(self) -> Dict[str, List[Order]]:
         """Group orders by status"""
         
     async def get_active_drivers(self) -> List[Dict]:
@@ -188,7 +188,7 @@ App.jsx
 ├── DeliveryTracker.jsx       # NEW: Track individual delivery
 ├── SystemDashboard.jsx       # NEW: System state overview
 ├── SupplierPanel.jsx
-├── CustomerPanel.jsx
+├── BuyerPanel.jsx
 ├── DispatchPanel.jsx
 └── OrdersPanel.jsx
 ```
@@ -221,7 +221,7 @@ App.jsx
 │  Phone: +1234567890             │
 │  ETA: 15 minutes                │
 ├─────────────────────────────────┤
-│  Pizza: Margherita              │
+│  Item: Electronics Bundle              │
 │  Address: 123 Main St           │
 └─────────────────────────────────┘
 ```

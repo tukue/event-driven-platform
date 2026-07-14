@@ -2,9 +2,9 @@ import { useState } from 'react'
 
 function SupplierPanel({ orders }) {
   const [form, setForm] = useState({
-    supplier_name: '',
-    pizza_name: '',
-    supplier_price: '',
+    source_name: '',
+    item_name: '',
+    source_price: '',
     markup_percentage: '30'
   })
   const [responseForm, setResponseForm] = useState({
@@ -13,7 +13,7 @@ function SupplierPanel({ orders }) {
     estimatedTime: '30'
   })
 
-  const pendingOrders = orders.filter(e => e.order.status === 'pending_supplier')
+  const pendingOrders = orders.filter(e => e.order.status === 'pending_source')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -26,7 +26,7 @@ function SupplierPanel({ orders }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          supplier_price: parseFloat(form.supplier_price),
+          source_price: parseFloat(form.source_price),
           markup_percentage: parseFloat(form.markup_percentage)
         })
       })
@@ -41,7 +41,7 @@ function SupplierPanel({ orders }) {
       const result = await response.json()
       console.log('Order created:', result)
       
-      setForm({ supplier_name: '', pizza_name: '', supplier_price: '', markup_percentage: '30' })
+      setForm({ source_name: '', item_name: '', source_price: '', markup_percentage: '30' })
     } catch (error) {
       console.error('Error creating order:', error)
       alert('Error: ' + error.message)
@@ -49,7 +49,7 @@ function SupplierPanel({ orders }) {
   }
 
   const handleResponse = async (accept) => {
-    await fetch(`http://localhost:8000/api/orders/${responseForm.orderId}/supplier-respond?accept=${accept}&notes=${encodeURIComponent(responseForm.notes)}&estimated_time=${responseForm.estimatedTime}`, {
+    await fetch(`http://localhost:8000/api/orders/${responseForm.orderId}/source-respond?accept=${accept}&notes=${encodeURIComponent(responseForm.notes)}&estimated_time=${responseForm.estimatedTime}`, {
       method: 'POST'
     })
     
@@ -65,9 +65,9 @@ function SupplierPanel({ orders }) {
         <div style={{ marginBottom: '8px' }}>
           <input
             type="text"
-            placeholder="Supplier Name"
-            value={form.supplier_name}
-            onChange={(e) => setForm({...form, supplier_name: e.target.value})}
+            placeholder="Source Name"
+            value={form.source_name}
+            onChange={(e) => setForm({...form, source_name: e.target.value})}
             required
             style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontSize: '13px' }}
           />
@@ -75,9 +75,9 @@ function SupplierPanel({ orders }) {
         <div style={{ marginBottom: '8px' }}>
           <input
             type="text"
-            placeholder="Pizza Name"
-            value={form.pizza_name}
-            onChange={(e) => setForm({...form, pizza_name: e.target.value})}
+            placeholder="Item Name"
+            value={form.item_name}
+            onChange={(e) => setForm({...form, item_name: e.target.value})}
             required
             style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontSize: '13px' }}
           />
@@ -87,8 +87,8 @@ function SupplierPanel({ orders }) {
             type="number"
             step="0.01"
             placeholder="Price ($)"
-            value={form.supplier_price}
-            onChange={(e) => setForm({...form, supplier_price: e.target.value})}
+            value={form.source_price}
+            onChange={(e) => setForm({...form, source_price: e.target.value})}
             required
             style={{ padding: '6px', fontSize: '13px' }}
           />
@@ -121,7 +121,7 @@ function SupplierPanel({ orders }) {
             <option value="">Select Order</option>
             {pendingOrders.map(e => (
               <option key={e.order.id} value={e.order.id}>
-                {e.order.pizza_name} - ${e.order.supplier_price}
+                {e.order.item_name} - ${e.order.source_price}
               </option>
             ))}
           </select>

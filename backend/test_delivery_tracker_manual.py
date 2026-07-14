@@ -33,9 +33,9 @@ def test_complete_delivery_flow():
         # Step 1: Create an order
         print_step(1, "Create Order")
         response = requests.post(f"{BASE_URL}/api/orders", json={
-            "pizza_name": "Margherita Test",
-            "supplier_name": "Test Pizza Palace",
-            "supplier_price": 12.99
+            "item_name": "Electronics Bundle Test",
+            "source_name": "Test Quick Mart",
+            "source_price": 12.99
         })
         assert response.status_code == 200, f"Failed to create order: {response.status_code}"
         event = response.json()
@@ -53,7 +53,7 @@ def test_complete_delivery_flow():
         response = requests.post(
             f"{BASE_URL}/api/orders/{order_id}/customer-accept",
             params={
-                "customer_name": "Test Customer",
+                "buyer_name": "Test Customer",
                 "delivery_address": "123 Test Street"
             }
         )
@@ -192,9 +192,9 @@ def test_multiple_orders():
         # Create 3 orders
         for i in range(3):
             response = requests.post(f"{BASE_URL}/api/orders", json={
-                "pizza_name": f"Test Pizza {i+1}",
-                "supplier_name": f"Test Supplier {i+1}",
-                "supplier_price": 10.99 + i
+                "item_name": f"Test Item {i+1}",
+                "source_name": f"Test Source {i+1}",
+                "source_price": 10.99 + i
             })
             assert response.status_code == 200
             order_id = response.json()["order"]["id"]
@@ -204,7 +204,7 @@ def test_multiple_orders():
             requests.post(
                 f"{BASE_URL}/api/orders/{order_id}/customer-accept",
                 params={
-                    "customer_name": f"Customer {i+1}",
+                    "buyer_name": f"Customer {i+1}",
                     "delivery_address": f"{i+1} Street"
                 }
             )
@@ -242,16 +242,16 @@ def test_state_endpoint_integration():
     try:
         # Create and dispatch an order
         response = requests.post(f"{BASE_URL}/api/orders", json={
-            "pizza_name": "State Test Pizza",
-            "supplier_name": "State Test Supplier",
-            "supplier_price": 13.99
+            "item_name": "State Test Item",
+            "source_name": "State Test Source",
+            "source_price": 13.99
         })
         order_id = response.json()["order"]["id"]
         
         requests.post(
             f"{BASE_URL}/api/orders/{order_id}/customer-accept",
             params={
-                "customer_name": "State Test Customer",
+                "buyer_name": "State Test Customer",
                 "delivery_address": "State Test Address"
             }
         )

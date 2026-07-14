@@ -91,10 +91,10 @@ async def check_prometheus_endpoint():
                         if len(parts) >= 2:
                             metrics[parts[0]] = parts[1]
                 
-                if 'pizza_orders_total' in metrics:
-                    print(f"   📊 Total orders: {metrics['pizza_orders_total']}")
-                if 'pizza_orders_delivered' in metrics:
-                    print(f"   📊 Delivered: {metrics['pizza_orders_delivered']}")
+                if 'orders_total' in metrics:
+                    print(f"   📊 Total orders: {metrics['orders_total']}")
+                if 'orders_delivered' in metrics:
+                    print(f"   📊 Delivered: {metrics['orders_delivered']}")
                 
                 return True
             else:

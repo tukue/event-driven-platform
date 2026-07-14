@@ -1,7 +1,7 @@
 services:
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:latest
-    container_name: pizza-redpanda
+    container_name: order-redpanda
     ports:
       - "9092:9092"
     command:
@@ -16,7 +16,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: pizza-backend
+    container_name: order-backend
     ports:
       - "8000:8000"
     environment:
@@ -35,7 +35,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: pizza-redis
+    container_name: order-redis
     ports:
       - "6379:6379"
 
@@ -43,7 +43,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: pizza-frontend
+    container_name: order-frontend
     ports:
       - "5173:5173"
     environment:

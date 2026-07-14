@@ -1,4 +1,4 @@
-from models import PizzaOrder, OrderStatus, OrderEvent, EventBatch, BatchResult
+from models import Order, OrderStatus, OrderEvent, EventBatch, BatchResult
 from datetime import datetime
 import uuid
 import json
@@ -13,16 +13,15 @@ class OrderService:
         self.redis = redis_client
         self.kafka = kafka_service
     
-    async def create_order(self, order: PizzaOrder) -> OrderEvent:
-        print(f"📝 Creating order: {order.pizza_name} from {order.supplier_name}")
+    async def create_order(self, order: Order) -> OrderEvent:
+        print(f"Creating order: {order.item_name} from {order.source_name}")
         order.id = str(uuid.uuid4())
         order.created_at = datetime.utcnow()
         order.updated_at = order.created_at
-        order.status = OrderStatus.PENDING_SUPPLIER
+        order.status = OrderStatus.PENDING_SOURCE
         
-        # Generate human-readable tracking IDs
         order.tracking_id = self._generate_tracking_id()
-        order.supplier_tracking_id = self._generate_supplier_tracking_id(order.supplier_name)
+        order.source_tracking_id = self._generate_source_tracking_id(order.source_name)
         
         await self._save_order(order)
         
@@ -32,23 +31,23 @@ class OrderService:
             timestamp=datetime.utcnow()
         )
         await self._publish_event(event)
-        print(f"✅ Order created and published: {order.id}")
-        print(f"   📦 Tracking ID: {order.tracking_id}")
-        print(f"   🏪 Supplier Tracking ID: {order.supplier_tracking_id}")
+        print(f"Order created and published: {order.id}")
+        print(f"  Tracking ID: {order.tracking_id}")
+        print(f"  Source Tracking ID: {order.source_tracking_id}")
         return event
     
-    async def supplier_respond(self, order_id: str, accept: bool, notes: str = None, estimated_time: int = None) -> OrderEvent:
+    async def source_respond(self, order_id: str, accept: bool, notes: str = None, estimated_time: int = None) -> OrderEvent:
         order = await self._get_order(order_id)
         
         if accept:
-            order.status = OrderStatus.SUPPLIER_ACCEPTED
-            order.supplier_notes = notes
+            order.status = OrderStatus.SOURCE_ACCEPTED
+            order.source_notes = notes
             order.estimated_delivery_time = estimated_time or 30
-            event_type = "order.supplier_accepted"
+            event_type = "order.source_accepted"
         else:
-            order.status = OrderStatus.SUPPLIER_REJECTED
-            order.supplier_notes = notes or "Supplier declined"
-            event_type = "order.supplier_rejected"
+            order.status = OrderStatus.SOURCE_REJECTED
+            order.source_notes = notes or "Source declined"
+            event_type = "order.source_rejected"
         
         order.updated_at = datetime.utcnow()
         await self._save_order(order)
@@ -61,22 +60,22 @@ class OrderService:
         await self._publish_event(event)
         return event
     
-    async def customer_accept(self, order_id: str, customer_name: str, delivery_address: str) -> OrderEvent:
+    async def buyer_accept(self, order_id: str, buyer_name: str, delivery_address: str) -> OrderEvent:
         order = await self._get_order(order_id)
         
-        if order.status != OrderStatus.SUPPLIER_ACCEPTED:
-            raise ValueError("Order must be accepted by supplier first")
+        if order.status != OrderStatus.SOURCE_ACCEPTED:
+            raise ValueError("Order must be accepted by source first")
         
-        order.customer_price = round(order.supplier_price * (1 + order.markup_percentage / 100), 2)
-        order.customer_name = customer_name
+        order.buyer_price = round(order.source_price * (1 + order.markup_percentage / 100), 2)
+        order.buyer_name = buyer_name
         order.delivery_address = delivery_address
-        order.status = OrderStatus.CUSTOMER_ACCEPTED
+        order.status = OrderStatus.BUYER_ACCEPTED
         order.updated_at = datetime.utcnow()
         
         await self._save_order(order)
         
         event = OrderEvent(
-            event_type="order.customer_accepted",
+            event_type="order.buyer_accepted",
             order=order,
             timestamp=datetime.utcnow()
         )
@@ -128,42 +127,39 @@ class OrderService:
         """Find an order by its tracking ID"""
         all_orders = await self.get_all_orders()
         for order in all_orders:
-            if order.get('tracking_id') == tracking_id or order.get('supplier_tracking_id') == tracking_id:
+            if order.get('tracking_id') == tracking_id or order.get('source_tracking_id') == tracking_id:
                 return order
         return None
     
-    async def _save_order(self, order: PizzaOrder):
+    async def _save_order(self, order: Order):
         order_dict = order.model_dump(mode='json')
         key = f"order:{order.id}"
         await self.redis.client.set(
             key,
             json.dumps(order_dict, default=str)
         )
-        print(f"✅ Order saved to Redis: {key}")
+        print(f"Order saved to Redis: {key}")
         
-        # Verify it was saved
         saved = await self.redis.client.get(key)
         if saved:
-            print(f"✅ Verified order in Redis: {order.id}")
+            print(f"Verified order in Redis: {order.id}")
         else:
-            print(f"❌ Failed to verify order in Redis: {order.id}")
+            print(f"Failed to verify order in Redis: {order.id}")
     
-    async def _get_order(self, order_id: str) -> PizzaOrder:
+    async def _get_order(self, order_id: str) -> Order:
         order_data = await self.redis.client.get(f"order:{order_id}")
         if not order_data:
             raise ValueError(f"Order {order_id} not found")
-        return PizzaOrder(**json.loads(order_data))
+        return Order(**json.loads(order_data))
     
     async def _publish_event(self, event: OrderEvent):
         event_data = event.model_dump(mode='json')
         
-        # Publish to Redis pub/sub for backward compatibility
         await self.redis.publish(
-            "pizza_orders",
+            "orders",
             json.dumps(event_data, default=str)
         )
         
-        # Add to Redis Stream for persistence and advanced features
         stream_data = {
             "event_type": event.event_type,
             "order_id": event.order.id,
@@ -174,14 +170,13 @@ class OrderService:
         if event.correlation_id:
             stream_data["correlation_id"] = event.correlation_id
         
-        await self.redis.add_to_stream("pizza_orders_stream", stream_data)
-        print(f"✅ Event published to stream: {event.event_type} for order {event.order.id}")
+        await self.redis.add_to_stream("orders_stream", stream_data)
+        print(f"Event published to stream: {event.event_type} for order {event.order.id}")
 
-        # Publish to Kafka (if configured)
         if self.kafka:
             try:
                 await self.kafka.publish_event(event_data)
-                print(f"✅ Event published to Kafka: {event.event_type} for order {event.order.id}")
+                print(f"Event published to Kafka: {event.event_type} for order {event.order.id}")
             except Exception as e:
                 logger.warning(
                     "Kafka publish failed for event %s on order %s (non-blocking): %s",
@@ -193,23 +188,20 @@ class OrderService:
     def _generate_tracking_id(self) -> str:
         """
         Generate a human-readable tracking ID
-        Format: PIZZA-YYYY-NNNNNN (e.g., PIZZA-2024-001234)
+        Format: ORD-YYYY-NNNNNN (e.g., ORD-2024-001234)
         """
         year = datetime.utcnow().year
-        # Generate 6-digit random number
         number = random.randint(100000, 999999)
-        return f"PIZZA-{year}-{number}"
+        return f"ORD-{year}-{number}"
     
-    def _generate_supplier_tracking_id(self, supplier_name: str) -> str:
+    def _generate_source_tracking_id(self, source_name: str) -> str:
         """
-        Generate a supplier-specific tracking ID
-        Format: SUPPLIER_PREFIX-NNNN (e.g., PP-1234 for Pizza Palace)
+        Generate a source-specific tracking ID
+        Format: SOURCE_PREFIX-NNNN (e.g., PP-1234 for Quick Mart)
         """
-        # Create prefix from supplier name (first letters of each word)
-        words = supplier_name.upper().split()
-        prefix = ''.join(word[0] for word in words[:3])  # Max 3 letters
+        words = source_name.upper().split()
+        prefix = ''.join(word[0] for word in words[:3])
         
-        # Generate 4-digit number
         number = random.randint(1000, 9999)
         
         return f"{prefix}-{number}"
@@ -243,19 +235,15 @@ class OrderService:
         errors = []
         
         try:
-            # Publish all events in order
             for event_data in events:
                 try:
-                    # Add correlation ID to each event
                     event_data['correlation_id'] = correlation_id
                     
-                    # Publish to Redis pub/sub for backward compatibility
                     await self.redis.publish(
-                        "pizza_orders",
+                        "orders",
                         json.dumps(event_data, default=str)
                     )
                     
-                    # Add to Redis Stream for persistence
                     stream_data = {
                         "event_type": event_data.get("event_type", "batch_event"),
                         "correlation_id": correlation_id,
@@ -263,9 +251,8 @@ class OrderService:
                         "data": json.dumps(event_data, default=str)
                     }
                     
-                    await self.redis.add_to_stream("pizza_orders_stream", stream_data)
+                    await self.redis.add_to_stream("orders_stream", stream_data)
 
-                    # Publish to Kafka (if configured)
                     if self.kafka:
                         try:
                             await self.kafka.publish_event(event_data)
@@ -283,7 +270,6 @@ class OrderService:
                     failed_count += 1
                     errors.append(f"Failed to publish event: {str(e)}")
                     
-                    # If any event fails, publish rollback event
                     await self._publish_rollback_event(correlation_id, errors)
                     
                     return BatchResult(
@@ -295,7 +281,6 @@ class OrderService:
                         timestamp=datetime.utcnow()
                     )
             
-            # All events published successfully
             return BatchResult(
                 correlation_id=correlation_id,
                 success=True,
@@ -306,7 +291,6 @@ class OrderService:
             )
             
         except Exception as e:
-            # Unexpected error during batch processing
             errors.append(f"Batch processing error: {str(e)}")
             await self._publish_rollback_event(correlation_id, errors)
             
@@ -330,9 +314,9 @@ class OrderService:
         
         try:
             await self.redis.publish(
-                "pizza_orders",
+                "orders",
                 json.dumps(rollback_event, default=str)
             )
-            print(f"⚠️  Published rollback event for correlation_id: {correlation_id}")
+            print(f"Published rollback event for correlation_id: {correlation_id}")
         except Exception as e:
-            print(f"❌ Failed to publish rollback event: {str(e)}")
+            print(f"Failed to publish rollback event: {str(e)}")

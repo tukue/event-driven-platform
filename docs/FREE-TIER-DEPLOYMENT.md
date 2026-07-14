@@ -72,7 +72,7 @@ Kafka (Redpanda Dev Container - Local Only)
 ```yaml
 services:
   - type: web
-    name: pizza-delivery-backend
+    name: order-delivery-backend
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
@@ -91,7 +91,7 @@ services:
 
 **Frontend: Update `.env.production`**
 ```env
-VITE_API_URL=https://pizza-delivery-backend.onrender.com
+VITE_API_URL=https://order-delivery-backend.onrender.com
 ```
 
 #### 1.2 Add Health Check Endpoint
@@ -128,7 +128,7 @@ connection_params["max_connections"] = 10
 2. Connect your GitHub repository
 3. Select `backend` folder as root directory
 4. Configure:
-   - Name: `pizza-delivery-backend`
+   - Name: `order-delivery-backend`
    - Environment: `Python 3`
    - Build Command: `pip install -r requirements.txt`
    - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
@@ -147,7 +147,7 @@ CORS_ORIGINS=https://your-app.vercel.app
 **Step 4: Deploy**
 - Click "Create Web Service"
 - Wait 5-10 minutes for first deployment
-- Note your URL: `https://pizza-delivery-backend.onrender.com`
+- Note your URL: `https://order-delivery-backend.onrender.com`
 
 ### Phase 3: Deploy Frontend to Vercel (5 minutes)
 
@@ -166,7 +166,7 @@ CORS_ORIGINS=https://your-app.vercel.app
 
 **Step 3: Add Environment Variable**
 ```
-VITE_API_URL=https://pizza-delivery-backend.onrender.com
+VITE_API_URL=https://order-delivery-backend.onrender.com
 ```
 
 **Step 4: Deploy**
@@ -207,7 +207,7 @@ docker compose up -d redpanda
 docker compose logs redpanda
 
 # Create the topic
-docker compose exec redpanda rpk topic create pizza.orders --partitions 3
+docker compose exec redpanda rpk topic create orders --partitions 3
 ```
 
 ### Connect Backend to Local Kafka
@@ -215,7 +215,7 @@ docker compose exec redpanda rpk topic create pizza.orders --partitions 3
 Add to `backend/.env`:
 ```env
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-KAFKA_TOPIC=pizza.orders
+KAFKA_TOPIC=orders
 ```
 
 Start the backend with Kafka enabled:
@@ -228,12 +228,12 @@ python main.py
 
 ```bash
 # Terminal 1: Watch Kafka events
-docker compose exec redpanda rpk topic consume pizza.orders
+docker compose exec redpanda rpk topic consume orders
 
 # Terminal 2: Create an order via API
 curl -X POST http://localhost:8000/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"supplier_name":"Pizza Palace","pizza_name":"Margherita","supplier_price":10.0,"markup_percentage":30.0}'
+  -d '{"source_name":"Quick Mart","item_name":"Electronics Bundle","source_price":10.0,"markup_percentage":30.0}'
 
 # Terminal 3: Watch WebSocket events (optional)
 # Open browser console and connect to ws://localhost:8000/ws
@@ -256,7 +256,7 @@ This demonstrates the **dual-write migration pattern** - a key enterprise archit
 
 #### 1. Custom Domain (Optional - Free)
 **Option A: Use Vercel subdomain**
-- `pizza-delivery.vercel.app`
+- `order-delivery.vercel.app`
 
 **Option B: Free domain from Freenom**
 - Get `.tk`, `.ml`, `.ga` domain free
@@ -292,7 +292,7 @@ Add a simple landing page explaining the project:
 function LandingPage() {
   return (
     <div>
-      <h1>Event-Driven Pizza Delivery System</h1>
+      <h1>Event-Driven Order Delivery System</h1>
       <p>Real-time order management with React, FastAPI, and Redis</p>
       <button>View Demo</button>
       <button>View Code</button>
@@ -353,15 +353,15 @@ setInterval(() => {
 Event-driven real-time order management system
 
 **Tech Stack:** React, FastAPI, Redis, WebSocket, Kafka
-**Live Demo:** https://pizza-delivery.vercel.app
-**Source Code:** https://github.com/yourusername/pizza-delivery
+**Live Demo:** https://order-delivery.vercel.app
+**Source Code:** https://github.com/yourusername/order-delivery
 **Video Demo:** https://youtube.com/...
 
 **Key Features:**
 - Real-time order updates via WebSocket
 - Event-driven architecture with Redis Pub/Sub
 - Kafka dual-write for scalable event streaming
-- Multi-role system (Supplier, Customer, Dispatch)
+- Multi-role system (Source, Buyer, Dispatch)
 - State machine for order lifecycle
 - Responsive UI with live status updates
 ```
@@ -456,9 +456,9 @@ sentry_sdk.init(dsn="your-dsn")
 A real-time order management system demonstrating event-driven architecture
 and WebSocket communication with Kafka integration.
 
-**Live Demo:** https://pizza-delivery.vercel.app
+**Live Demo:** https://order-delivery.vercel.app
 **Video Demo:** [2-minute walkthrough]
-**Source Code:** https://github.com/yourusername/pizza-delivery
+**Source Code:** https://github.com/yourusername/order-delivery
 
 ## Technical Highlights
 
@@ -476,7 +476,7 @@ and WebSocket communication with Kafka integration.
 
 ## Features
 
-- Multi-role system (Supplier, Customer, Dispatch)
+- Multi-role system (Source, Buyer, Dispatch)
 - Real-time order status updates
 - Automatic price markup calculation
 - Driver assignment and tracking
@@ -539,7 +539,7 @@ For consulting/interviews, emphasize:
 
 ## You're Ready!
 
-Your pizza delivery app is now:
+Your order delivery app is now:
 - Deployed on free tier
 - Accessible worldwide
 - Professional looking

@@ -7,7 +7,7 @@
 - Calculates delivery statistics
 - Generates time-series metrics
 - Formats output in Prometheus and JSON formats
-- Provides supplier and driver breakdowns
+- Provides source and driver breakdowns
 
 ### 2. API Endpoints (`backend/main.py`)
 - `GET /metrics` - Prometheus format for Grafana
@@ -20,7 +20,7 @@
 - Orders In Transit (Stat)
 - Orders Dispatched (Stat)
 - Deliveries Over Time (Time Series)
-- Deliveries by Supplier (Pie Chart)
+- Deliveries by Source (Pie Chart)
 - Deliveries by Driver (Bar Chart)
 
 ### 4. Testing Tools
@@ -39,16 +39,16 @@
 
 ### Prometheus Format
 ```
-pizza_orders_total 76
-pizza_orders_delivered 50
-pizza_orders_in_transit 5
-pizza_orders_dispatched 3
-pizza_delivery_rate_percent 65.79
-pizza_delivered_today 2
-pizza_delivered_week 12
-pizza_delivered_month 50
-pizza_delivered_by_supplier{supplier="Pizza Palace"} 12
-pizza_delivered_by_driver{driver="John Smith"} 8
+orders_total 76
+orders_delivered 50
+orders_in_transit 5
+orders_dispatched 3
+delivery_rate_percent 65.79
+delivered_today 2
+delivered_week 12
+delivered_month 50
+delivered_by_source{source="Quick Mart"} 12
+delivered_by_driver{driver="John Smith"} 8
 ```
 
 ### JSON Format
@@ -66,7 +66,7 @@ pizza_delivered_by_driver{driver="John Smith"} 8
     "last_7_days": 12,
     "last_30_days": 50
   },
-  "by_supplier": { ... },
+  "by_source": { ... },
   "by_driver": { ... },
   "hourly_distribution": { ... }
 }
@@ -106,7 +106,7 @@ python test_grafana_metrics.py
 - Identify bottlenecks
 
 ### 2. Performance Analysis
-- Compare supplier performance
+- Compare source performance
 - Evaluate driver efficiency
 - Analyze delivery patterns
 
@@ -124,7 +124,7 @@ python test_grafana_metrics.py
 
 ### Grafana Datasource
 ```
-Name: Pizza Delivery Metrics
+Name: Order Delivery Metrics
 Type: Prometheus
 URL: http://localhost:8000/metrics
 Access: Browser (local) or Server (remote)
@@ -148,7 +148,7 @@ The test data generator creates:
 - 6 preparing orders
 - 8 pending orders
 
-Total: 76 orders across 5 suppliers and 5 drivers
+Total: 76 orders across 5 sources and 5 drivers
 
 ## 🧪 Testing Checklist
 
@@ -235,7 +235,7 @@ This implementation demonstrates:
 
 ### Short-Term (Enhancement)
 1. Add more metrics (avg delivery time, revenue)
-2. Create additional dashboards (supplier view, driver view)
+2. Create additional dashboards (source view, driver view)
 3. Set up basic alerts
 4. Add authentication
 
@@ -281,7 +281,7 @@ This implementation demonstrates:
 ### Comprehensive Metrics
 - 10+ different metrics
 - Multiple visualization types
-- Supplier and driver breakdowns
+- Source and driver breakdowns
 
 ### Easy Testing
 - One-command test data generation

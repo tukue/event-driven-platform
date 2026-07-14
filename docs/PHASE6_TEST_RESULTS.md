@@ -25,8 +25,8 @@
 |------|--------|
 | test_create_order_endpoint | ✅ PASSED |
 | test_get_orders_endpoint | ✅ PASSED |
-| test_supplier_respond_endpoint | ✅ PASSED |
-| test_customer_accept_endpoint | ✅ PASSED |
+| test_source_respond_endpoint | ✅ PASSED |
+| test_buyer_accept_endpoint | ✅ PASSED |
 | test_dispatch_endpoint | ✅ PASSED |
 | test_update_status_endpoint | ✅ PASSED |
 | test_invalid_order_id | ✅ PASSED |
@@ -69,7 +69,7 @@
 |------|--------|
 | test_complete_order_flow_integration | ✅ PASSED |
 | test_multiple_orders_concurrent | ✅ PASSED |
-| test_supplier_rejection_flow | ✅ PASSED |
+| test_source_rejection_flow | ✅ PASSED |
 | test_pricing_calculation | ✅ PASSED |
 | test_order_state_validation | ✅ PASSED |
 
@@ -78,8 +78,8 @@
 
 | Test | Status |
 |------|--------|
-| test_pizza_order_creation | ✅ PASSED |
-| test_pizza_order_with_customer | ✅ PASSED |
+| test_order_creation | ✅ PASSED |
+| test_order_with_buyer | ✅ PASSED |
 | test_order_event_creation | ✅ PASSED |
 | test_order_status_enum | ✅ PASSED |
 
@@ -89,10 +89,10 @@
 | Test | Status |
 |------|--------|
 | test_create_order | ✅ PASSED |
-| test_supplier_accept_order | ✅ PASSED |
-| test_supplier_reject_order | ✅ PASSED |
-| test_customer_accept_order | ✅ PASSED |
-| test_customer_accept_without_supplier_fails | ✅ PASSED |
+| test_source_accept_order | ✅ PASSED |
+| test_source_reject_order | ✅ PASSED |
+| test_buyer_accept_order | ✅ PASSED |
+| test_buyer_accept_without_source_fails | ✅ PASSED |
 | test_dispatch_order | ✅ PASSED |
 | test_complete_order_lifecycle | ✅ PASSED |
 | test_get_all_orders | ✅ PASSED |
@@ -121,11 +121,11 @@
 | test_order_creation_generates_tracking_ids | ✅ PASSED |
 | test_track_order_by_tracking_id_not_dispatched | ✅ PASSED |
 | test_track_order_by_tracking_id_dispatched | ✅ PASSED |
-| test_track_order_by_supplier_tracking_id | ✅ PASSED |
+| test_track_order_by_source_tracking_id | ✅ PASSED |
 | test_track_invalid_tracking_id | ✅ PASSED |
 | test_tracking_ids_are_unique | ✅ PASSED |
 | test_delivery_info_includes_tracking_ids | ✅ PASSED |
-| test_supplier_tracking_id_prefix_generation | ✅ PASSED |
+| test_source_tracking_id_prefix_generation | ✅ PASSED |
 | test_tracking_id_persists_through_order_lifecycle | ✅ PASSED |
 
 ## Test Coverage Summary

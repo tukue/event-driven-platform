@@ -31,12 +31,12 @@ const OrderItem = ({ order }) => (
   <div className="order-item">
     <div className="order-item__header">
       <span className="order-item__id">#{order.id?.slice(0, 8)}</span>
-      <span className="order-item__pizza">{order.pizza_name}</span>
+      <span className="order-item__item">{order.item_name}</span>
     </div>
     <div className="order-item__details">
-      <span className="order-item__supplier">🏪 {order.supplier_name}</span>
-      {order.customer_name && (
-        <span className="order-item__customer">👤 {order.customer_name}</span>
+      <span className="order-item__source">🏪 {order.source_name}</span>
+      {order.buyer_name && (
+        <span className="order-item__buyer">👤 {order.buyer_name}</span>
       )}
       {order.driver_name && (
         <span className="order-item__driver">🚗 {order.driver_name}</span>
@@ -51,9 +51,9 @@ const OrderItem = ({ order }) => (
 OrderItem.propTypes = {
   order: PropTypes.shape({
     id: PropTypes.string,
-    pizza_name: PropTypes.string,
-    supplier_name: PropTypes.string,
-    customer_name: PropTypes.string,
+    item_name: PropTypes.string,
+    source_name: PropTypes.string,
+    buyer_name: PropTypes.string,
     driver_name: PropTypes.string,
     delivery_address: PropTypes.string,
   }).isRequired,
@@ -64,9 +64,9 @@ const StatusSection = ({ status, orders, icon, color }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const statusLabels = {
-    pending_supplier: 'Pending Supplier',
-    supplier_accepted: 'Supplier Accepted',
-    customer_accepted: 'Customer Accepted',
+    pending_source: 'Pending Source',
+    source_accepted: 'Source Accepted',
+    buyer_accepted: 'Buyer Accepted',
     preparing: 'Preparing',
     ready: 'Ready for Pickup',
     dispatched: 'Dispatched',
@@ -286,11 +286,11 @@ const SystemDashboard = () => {
 
   // Status configuration for rendering
   const statusConfig = [
-    { key: 'pending_supplier', icon: '⏳', color: '#8b5cf6' },
-    { key: 'supplier_accepted', icon: '✅', color: '#10b981' },
-    { key: 'customer_accepted', icon: '🤝', color: '#3b82f6' },
+    { key: 'pending_source', icon: '⏳', color: '#8b5cf6' },
+    { key: 'source_accepted', icon: '✅', color: '#10b981' },
+    { key: 'buyer_accepted', icon: '🤝', color: '#3b82f6' },
     { key: 'preparing', icon: '👨‍🍳', color: '#f59e0b' },
-    { key: 'ready', icon: '🍕', color: '#10b981' },
+    { key: 'ready', icon: '📦', color: '#10b981' },
     { key: 'dispatched', icon: '📦', color: '#8b5cf6' },
     { key: 'in_transit', icon: '🚗', color: '#f59e0b' },
     { key: 'delivered', icon: '🎉', color: '#10b981' },
@@ -343,8 +343,8 @@ const SystemDashboard = () => {
         />
         <StatCard
           icon="⏳"
-          label="Pending Supplier"
-          value={stats.pending_supplier || 0}
+          label="Pending Source"
+          value={stats.pending_source || 0}
           color="#8b5cf6"
         />
       </div>

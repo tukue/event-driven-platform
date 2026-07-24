@@ -25,6 +25,7 @@ class KafkaConsumerService:
         self.consumer: Optional[AIOKafkaConsumer] = None
         self.handlers: Dict[str, Callable] = {}
         self.running = False
+        self._consume_task: Optional[asyncio.Task] = None
         self._processed_count = 0
         self._error_count = 0
         self._last_error: Optional[str] = None
@@ -45,12 +46,20 @@ class KafkaConsumerService:
         )
         await self.consumer.start()
         self.running = True
+        self._consume_task = asyncio.create_task(self.consume())
         logger.info(
             f"Kafka consumer started (group={self.group_id}, topic={self.topic})"
         )
 
     async def stop(self):
         self.running = False
+        if self._consume_task and not self._consume_task.done():
+            self._consume_task.cancel()
+            try:
+                await self._consume_task
+            except asyncio.CancelledError:
+                pass
+            self._consume_task = None
         if self.consumer:
             await self.consumer.stop()
             logger.info("Kafka consumer stopped")
@@ -72,7 +81,7 @@ class KafkaConsumerService:
             if self.running:
                 logger.info("Attempting to restart consumption in 5 seconds...")
                 await asyncio.sleep(5)
-                asyncio.create_task(self.consume())
+                self._consume_task = asyncio.create_task(self.consume())
 
     async def _process_message(self, msg):
         try:
@@ -120,6 +129,7 @@ class OrderEventProcessor:
             group_id="order-event-processors",
         )
         self._order_log: list = []
+        self._consume_task: Optional[asyncio.Task] = None
         self._setup_handlers()
 
     def _setup_handlers(self):
@@ -213,12 +223,19 @@ class OrderEventProcessor:
 
     async def start(self):
         await self.consumer.start()
-        asyncio.create_task(self.consume())
+        self._consume_task = self.consumer._consume_task
 
     async def consume(self):
         await self.consumer.consume()
 
     async def stop(self):
+        if self._consume_task and not self._consume_task.done():
+            self._consume_task.cancel()
+            try:
+                await self._consume_task
+            except asyncio.CancelledError:
+                pass
+            self._consume_task = None
         await self.consumer.stop()
 
     def get_stats(self) -> dict:

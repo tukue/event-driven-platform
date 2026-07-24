@@ -536,3 +536,97 @@ async def test_order_event_processor_logs_timestamp(order_event_processor):
 
     log = order_event_processor.get_order_log()
     assert before <= log[0]["timestamp"] <= after
+
+
+# ---------------------------------------------------------------------------
+# Task lifecycle tracking
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_consumer_start_creates_tracked_task(kafka_consumer_service, mock_aiokafka_consumer):
+    fake = FakeConsumer([])
+    mock_aiokafka_consumer.__aiter__ = lambda self: fake
+
+    await kafka_consumer_service.start()
+    assert kafka_consumer_service._consume_task is not None
+    assert not kafka_consumer_service._consume_task.done()
+
+    await kafka_consumer_service.stop()
+    assert kafka_consumer_service._consume_task is None
+
+
+@pytest.mark.asyncio
+async def test_consumer_stop_cancels_task(kafka_consumer_service, mock_aiokafka_consumer):
+    fake = FakeConsumer([])
+    mock_aiokafka_consumer.__aiter__ = lambda self: fake
+
+    await kafka_consumer_service.start()
+    task = kafka_consumer_service._consume_task
+
+    await kafka_consumer_service.stop()
+    assert task.cancelled()
+    assert kafka_consumer_service._consume_task is None
+
+
+@pytest.mark.asyncio
+async def test_consumer_stop_without_task():
+    from services.kafka_consumer import KafkaConsumerService
+    svc = KafkaConsumerService("localhost:9092")
+    await svc.stop()
+    assert svc._consume_task is None
+
+
+@pytest.mark.asyncio
+async def test_order_event_processor_start_creates_tracked_task(order_event_processor, mock_aiokafka_consumer):
+    fake = FakeConsumer([])
+    mock_aiokafka_consumer.__aiter__ = lambda self: fake
+
+    await order_event_processor.start()
+    assert order_event_processor._consume_task is not None
+    assert not order_event_processor._consume_task.done()
+
+    await order_event_processor.stop()
+    assert order_event_processor._consume_task is None
+
+
+@pytest.mark.asyncio
+async def test_order_event_processor_stop_cancels_task(order_event_processor, mock_aiokafka_consumer):
+    fake = FakeConsumer([])
+    mock_aiokafka_consumer.__aiter__ = lambda self: fake
+
+    await order_event_processor.start()
+    task = order_event_processor._consume_task
+
+    await order_event_processor.stop()
+    assert task.cancelled()
+    assert order_event_processor._consume_task is None
+
+
+@pytest.mark.asyncio
+async def test_consumer_restart_tracks_new_task(kafka_consumer_service, mock_aiokafka_consumer):
+    class FailThenStop:
+        def __init__(self):
+            self._calls = 0
+        def __aiter__(self):
+            return self
+        async def __anext__(self):
+            self._calls += 1
+            if self._calls == 1:
+                raise Exception("Connection lost")
+            raise StopAsyncIteration
+
+    mock_aiokafka_consumer.__aiter__ = lambda self: FailThenStop()
+    kafka_consumer_service.register_handler("order.created", AsyncMock())
+
+    await kafka_consumer_service.start()
+    original_task = kafka_consumer_service._consume_task
+
+    with patch("asyncio.sleep", AsyncMock()):
+        await kafka_consumer_service.consume()
+
+    new_task = kafka_consumer_service._consume_task
+    assert new_task is not original_task
+    assert kafka_consumer_service._error_count == 1
+    assert kafka_consumer_service._last_error == "Connection lost"
+
+    await kafka_consumer_service.stop()

@@ -14,11 +14,11 @@ class StreamConsumer:
         self,
         stream_name: str = "orders_stream",
         group_name: str = "event_processors",
-        dead_letter_stream: str = "orders_stream:dead_letter",
+        retry_stream: str = "orders_stream:retry",
     ):
         self.stream_name = stream_name
         self.group_name = group_name
-        self.dead_letter_stream = dead_letter_stream
+        self.retry_stream = retry_stream
         self.consumer_name = f"consumer_{id(self)}"
         self.redis = redis_client
         self.handlers: Dict[str, Callable] = {}
@@ -63,11 +63,11 @@ class StreamConsumer:
                             except Exception as e:
                                 logger.exception("Failed to process message %s", message_id)
                                 try:
-                                    await self._send_to_dead_letter_queue(message_id, message_data, e)
+                                    await self._send_to_retry_stream(message_id, message_data, e)
                                     message_ids.append(message_id)
                                 except Exception:
                                     logger.exception(
-                                        "Unable to dead-letter message %s; leaving it pending",
+                                        "Unable to move message %s to the retry stream; leaving it pending",
                                         message_id,
                                     )
                     
@@ -111,12 +111,12 @@ class StreamConsumer:
             logger.error(f"Error processing message {message_id}: {e}")
             raise
 
-    async def _send_to_dead_letter_queue(
+    async def _send_to_retry_stream(
         self, message_id: str, message_data: dict, error: Exception
     ) -> None:
-        """Preserve unprocessable events before acknowledging them from the source stream."""
+        """Preserve unprocessable events for retry before acknowledging the source stream."""
         await self.redis.add_to_stream(
-            self.dead_letter_stream,
+            self.retry_stream,
             {
                 "original_stream": self.stream_name,
                 "original_message_id": message_id,

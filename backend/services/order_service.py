@@ -193,7 +193,7 @@ class OrderService:
             "event_id": event.event_id,
             "schema_version": str(event.schema_version),
             "event_type": event.event_type,
-            "order_id": event.order.id,
+            "order_id": event.order_id,
             "timestamp": event.timestamp.isoformat(),
             "data": json.dumps(event_data, default=str)
         }
@@ -281,6 +281,7 @@ class OrderService:
                     event_data['correlation_id'] = correlation_id
                     event_data.setdefault("event_id", str(uuid.uuid4()))
                     event_data.setdefault("schema_version", 1)
+                    event_data.setdefault("order_id", event_data.get("order", {}).get("id"))
                     
                     await self.redis.publish(
                         "orders",
@@ -295,6 +296,9 @@ class OrderService:
                         "timestamp": datetime.utcnow().isoformat(),
                         "data": json.dumps(event_data, default=str)
                     }
+
+                    if event_data["order_id"] is not None:
+                        stream_data["order_id"] = event_data["order_id"]
                     
                     await self.redis.add_to_stream("orders_stream", stream_data)
 

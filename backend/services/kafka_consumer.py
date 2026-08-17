@@ -42,7 +42,7 @@ class KafkaConsumerService:
             value_deserializer=lambda m: json.loads(m.decode("utf-8")),
             key_deserializer=lambda k: k.decode("utf-8") if k else None,
             auto_offset_reset=self.auto_offset_reset,
-            enable_auto_commit=True,
+            enable_auto_commit=False,
         )
         await self.consumer.start()
         self.running = True
@@ -74,6 +74,7 @@ class KafkaConsumerService:
                 if not self.running:
                     break
                 await self._process_message(msg)
+                await self.consumer.commit()
         except Exception as e:
             logger.error(f"Error in consume loop: {e}")
             self._last_error = str(e)

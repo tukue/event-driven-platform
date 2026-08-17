@@ -138,8 +138,10 @@ async def test_published_events_include_versioned_envelope(order_service, mock_r
     stream_entry = mock_redis._streams["orders_stream"][-1][1]
     assert event.event_id
     assert event.schema_version == 1
+    assert event.order_id == event.order.id
     assert stream_entry["event_id"] == event.event_id
     assert stream_entry["schema_version"] == "1"
+    assert stream_entry["order_id"] == event.order_id
 
 @pytest.mark.asyncio
 async def test_dispatch_order(order_service):

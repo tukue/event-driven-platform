@@ -16,6 +16,7 @@ class KafkaService:
             bootstrap_servers=self.bootstrap_servers,
             value_serializer=lambda v: json.dumps(v, default=str).encode(),
             key_serializer=lambda k: k.encode() if k else None,
+            enable_idempotence=True,
         )
         await self.producer.start()
         logger.info(f"Kafka producer started (bootstrap_servers={self.bootstrap_servers}, topic={self.topic})")
@@ -26,19 +27,32 @@ class KafkaService:
             logger.info("Kafka producer stopped")
 
     async def publish_event(self, event_data: dict):
+        """Publish an event only after Kafka acknowledges durable receipt."""
         if not self.producer:
             raise RuntimeError("Kafka producer not started. Call start() first.")
 
-        order_id = event_data.get("order", {}).get("id")
-        await self.producer.send(
+        order_id = event_data.get("order", {}).get("id") or event_data.get("order_id")
+        headers = self._event_headers(event_data)
+        return await self.producer.send_and_wait(
             topic=self.topic,
             key=order_id,
             value=event_data,
+            headers=headers,
         )
 
     async def publish_events(self, events: list[dict]):
         for event_data in events:
             await self.publish_event(event_data)
+
+    @staticmethod
+    def _event_headers(event_data: dict) -> list[tuple[str, bytes]]:
+        """Expose routing and tracing metadata without consumers parsing the payload."""
+        header_fields = ("event_id", "event_type", "schema_version", "correlation_id")
+        return [
+            (field, str(event_data[field]).encode("utf-8"))
+            for field in header_fields
+            if event_data.get(field) is not None
+        ]
 
 
 class WebSocketBridge:

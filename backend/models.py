@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional
 from datetime import datetime
 from enum import Enum
+import uuid
 
 class OrderStatus(str, Enum):
     CREATED = "created"
@@ -35,10 +36,22 @@ class Order(BaseModel):
     updated_at: Optional[datetime] = None
 
 class OrderEvent(BaseModel):
+    """Versioned event envelope emitted by the order service."""
+    event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    schema_version: int = 1
     event_type: str
     order: Order
+    order_id: Optional[str] = None
     timestamp: datetime
     correlation_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def populate_order_id(self):
+        if self.order_id is None:
+            self.order_id = self.order.id
+        elif self.order.id and self.order_id != self.order.id:
+            raise ValueError("order_id must match order.id")
+        return self
 
 class DeliveryTimeline(BaseModel):
     """Timeline entry for delivery tracking"""

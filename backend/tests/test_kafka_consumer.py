@@ -113,6 +113,19 @@ async def test_consumer_start_configures_aiokafka(kafka_consumer_service, mock_a
 
 
 @pytest.mark.asyncio
+async def test_consumer_disables_auto_commit():
+    from services.kafka_consumer import KafkaConsumerService
+
+    with patch("services.kafka_consumer.AIOKafkaConsumer") as consumer_class:
+        consumer_class.return_value = AsyncMock()
+        service = KafkaConsumerService("localhost:9092")
+        await service.start()
+
+        assert consumer_class.call_args.kwargs["enable_auto_commit"] is False
+        await service.stop()
+
+
+@pytest.mark.asyncio
 async def test_consumer_stop_without_start():
     from services.kafka_consumer import KafkaConsumerService
     svc = KafkaConsumerService("localhost:9092")
@@ -224,6 +237,7 @@ async def test_consume_processes_multiple_messages(kafka_consumer_service, mock_
 
     assert handler.await_count == 5
     assert kafka_consumer_service._processed_count == 5
+    assert mock_aiokafka_consumer.commit.await_count == 5
 
 
 @pytest.mark.asyncio
@@ -470,7 +484,7 @@ async def test_producer_consumer_roundtrip(mock_aiokafka_consumer):
         mock_producer = AsyncMock()
         mock_producer.start = AsyncMock()
         mock_producer.stop = AsyncMock()
-        mock_producer.send = AsyncMock()
+        mock_producer.send_and_wait = AsyncMock()
         mock_producer_cls.return_value = mock_producer
 
         await producer.start()
@@ -487,7 +501,7 @@ async def test_producer_consumer_roundtrip(mock_aiokafka_consumer):
         for e in events:
             await producer.publish_event(e)
 
-        assert mock_producer.send.await_count == 5
+        assert mock_producer.send_and_wait.await_count == 5
 
         fake = FakeConsumer(events)
         mock_aiokafka_consumer.__aiter__ = lambda self: fake

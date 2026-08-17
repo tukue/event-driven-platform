@@ -21,7 +21,7 @@ def mock_kafka_producer():
         instance = AsyncMock()
         instance.start = AsyncMock()
         instance.stop = AsyncMock()
-        instance.send = AsyncMock()
+        instance.send_and_wait = AsyncMock()
         mock.return_value = instance
         yield instance
 
@@ -76,6 +76,19 @@ async def test_kafka_service_start_stop(kafka_service):
 
 
 @pytest.mark.asyncio
+async def test_kafka_service_enables_idempotent_producer():
+    with patch("services.kafka_service.AIOKafkaProducer") as producer_class:
+        producer_class.return_value = AsyncMock()
+        from services.kafka_service import KafkaService
+
+        service = KafkaService("localhost:9092")
+        await service.start()
+
+        assert producer_class.call_args.kwargs["enable_idempotence"] is True
+        await service.stop()
+
+
+@pytest.mark.asyncio
 async def test_kafka_service_start_stop_idempotent(kafka_service):
     await kafka_service.stop()
 
@@ -87,11 +100,13 @@ async def test_kafka_service_publish_event(kafka_service, sample_event):
 
     await kafka_service.publish_event(event_data)
 
-    kafka_service.producer.send.assert_awaited_once()
-    call_args = kafka_service.producer.send.call_args
+    kafka_service.producer.send_and_wait.assert_awaited_once()
+    call_args = kafka_service.producer.send_and_wait.call_args
     assert call_args.kwargs["topic"] == "orders"
     assert call_args.kwargs["key"] == "test-123"
     assert call_args.kwargs["value"]["event_type"] == "order.created"
+    assert ("event_id", event_data["event_id"].encode("utf-8")) in call_args.kwargs["headers"]
+    assert ("schema_version", b"1") in call_args.kwargs["headers"]
 
 
 @pytest.mark.asyncio
@@ -101,9 +116,33 @@ async def test_kafka_service_publish_event_no_order_id(kafka_service):
 
     await kafka_service.publish_event(event_data)
 
-    kafka_service.producer.send.assert_awaited_once()
-    call_args = kafka_service.producer.send.call_args
+    kafka_service.producer.send_and_wait.assert_awaited_once()
+    call_args = kafka_service.producer.send_and_wait.call_args
     assert call_args.kwargs["key"] is None
+
+
+@pytest.mark.asyncio
+async def test_kafka_service_uses_top_level_order_id_as_key(kafka_service):
+    await kafka_service.start()
+
+    await kafka_service.publish_event(
+        {"event_type": "order.validation_passed", "order_id": "test-123"}
+    )
+
+    call_args = kafka_service.producer.send_and_wait.call_args
+    assert call_args.kwargs["key"] == "test-123"
+
+
+@pytest.mark.asyncio
+async def test_order_event_exposes_top_level_order_id(kafka_service, sample_event):
+    await kafka_service.start()
+    event_data = sample_event.model_dump(mode="json")
+
+    await kafka_service.publish_event(event_data)
+
+    call_args = kafka_service.producer.send_and_wait.call_args
+    assert event_data["order_id"] == "test-123"
+    assert call_args.kwargs["key"] == event_data["order_id"]
 
 
 @pytest.mark.asyncio
@@ -122,24 +161,24 @@ async def test_kafka_service_publish_multiple_events(kafka_service):
 
     await kafka_service.publish_events(events)
 
-    assert kafka_service.producer.send.await_count == 2
+    assert kafka_service.producer.send_and_wait.await_count == 2
 
 
 @pytest.mark.asyncio
 async def test_kafka_service_publish_empty_events(kafka_service):
     await kafka_service.start()
     await kafka_service.publish_events([])
-    kafka_service.producer.send.assert_not_awaited()
+    kafka_service.producer.send_and_wait.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_kafka_service_publish_error_handling(kafka_service, sample_event):
     await kafka_service.start()
-    kafka_service.producer.send.side_effect = Exception("Kafka broker unreachable")
+    kafka_service.producer.send_and_wait.side_effect = Exception("Kafka broker unreachable")
 
     with pytest.raises(Exception, match="Kafka broker unreachable"):
         await kafka_service.publish_event(sample_event.model_dump(mode="json"))
-    kafka_service.producer.send.assert_awaited_once()
+    kafka_service.producer.send_and_wait.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -149,7 +188,7 @@ async def test_kafka_service_serialization(kafka_service, sample_event):
 
     await kafka_service.publish_event(event_data)
 
-    call_args = kafka_service.producer.send.call_args
+    call_args = kafka_service.producer.send_and_wait.call_args
     sent_value = call_args.kwargs["value"]
     assert sent_value["event_type"] == "order.created"
     assert sent_value["order"]["id"] == "test-123"
@@ -172,8 +211,8 @@ async def test_order_service_publishes_to_kafka(mock_redis, sample_event, mock_k
     service = OrderService(mock_redis, kafka_service=kafka)
     await service.create_order(sample_event.order)
 
-    kafka.producer.send.assert_awaited_once()
-    call_args = kafka.producer.send.call_args
+    kafka.producer.send_and_wait.assert_awaited_once()
+    call_args = kafka.producer.send_and_wait.call_args
     assert call_args.kwargs["topic"] == "orders"
     assert call_args.kwargs["value"]["event_type"] == "order.created"
 
@@ -206,9 +245,9 @@ async def test_order_service_full_lifecycle_publishes_to_kafka(mock_redis, blank
     event5 = await service.update_status(order_id, OrderStatus.IN_TRANSIT)
     event6 = await service.update_status(order_id, OrderStatus.DELIVERED)
 
-    assert kafka.producer.send.await_count == 6
+    assert kafka.producer.send_and_wait.await_count == 6
 
-    sent_types = [call.kwargs["value"]["event_type"] for call in kafka.producer.send.call_args_list]
+    sent_types = [call.kwargs["value"]["event_type"] for call in kafka.producer.send_and_wait.call_args_list]
     assert sent_types == [
         "order.created",
         "order.source_accepted",
@@ -218,7 +257,7 @@ async def test_order_service_full_lifecycle_publishes_to_kafka(mock_redis, blank
         "order.delivered",
     ]
 
-    for call in kafka.producer.send.call_args_list:
+    for call in kafka.producer.send_and_wait.call_args_list:
         assert call.kwargs["topic"] == "orders"
         assert call.kwargs["key"] == order_id
 
@@ -231,14 +270,14 @@ async def test_order_service_kafka_failure_does_not_block_redis(mock_redis, samp
     kafka.producer = mock_kafka_producer
     kafka.producer.start = AsyncMock()
     kafka.producer.stop = AsyncMock()
-    kafka.producer.send.side_effect = Exception("Kafka down")
+    kafka.producer.send_and_wait.side_effect = Exception("Kafka down")
 
     service = OrderService(mock_redis, kafka_service=kafka)
 
     event = await service.create_order(sample_event.order)
 
     assert event.event_type == "order.created"
-    kafka.producer.send.assert_awaited_once()
+    kafka.producer.send_and_wait.assert_awaited_once()
     assert mock_redis.publish.await_count == 1
     assert "order:" in next(iter(mock_redis._storage.keys()))
 
@@ -263,9 +302,9 @@ async def test_order_service_batch_publishes_to_kafka(mock_redis, mock_kafka_pro
 
     assert result.success is True
     assert result.processed_count == 2
-    assert kafka.producer.send.await_count == 2
+    assert kafka.producer.send_and_wait.await_count == 2
 
-    for call in kafka.producer.send.call_args_list:
+    for call in kafka.producer.send_and_wait.call_args_list:
         assert call.kwargs["topic"] == "orders"
 
 
@@ -289,8 +328,8 @@ async def test_order_service_batch_does_not_duplicate_events(mock_redis, mock_ka
 
     assert result.success is True
     assert result.processed_count == 2
-    assert kafka.producer.send.await_count == 2
-    for call in kafka.producer.send.call_args_list:
+    assert kafka.producer.send_and_wait.await_count == 2
+    for call in kafka.producer.send_and_wait.call_args_list:
         assert call.kwargs["value"].get("correlation_id") == "corr-123"
 
 
@@ -302,7 +341,7 @@ async def test_order_service_batch_kafka_failure_does_not_fail_batch(mock_redis,
     kafka.producer = mock_kafka_producer
     kafka.producer.start = AsyncMock()
     kafka.producer.stop = AsyncMock()
-    kafka.producer.send.side_effect = Exception("Kafka down")
+    kafka.producer.send_and_wait.side_effect = Exception("Kafka down")
 
     service = OrderService(mock_redis, kafka_service=kafka)
 
@@ -317,7 +356,7 @@ async def test_order_service_batch_kafka_failure_does_not_fail_batch(mock_redis,
     assert result.processed_count == 2
     assert result.failed_count == 0
     assert result.errors == []
-    assert kafka.producer.send.await_count == 2
+    assert kafka.producer.send_and_wait.await_count == 2
     assert mock_redis.publish.await_count == 2
 
 

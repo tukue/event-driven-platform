@@ -10,9 +10,15 @@ logger = logging.getLogger(__name__)
 class StreamConsumer:
     """Redis Streams consumer for processing events asynchronously"""
     
-    def __init__(self, stream_name: str = "orders_stream", group_name: str = "event_processors"):
+    def __init__(
+        self,
+        stream_name: str = "orders_stream",
+        group_name: str = "event_processors",
+        dead_letter_stream: str = "orders_stream:dead_letter",
+    ):
         self.stream_name = stream_name
         self.group_name = group_name
+        self.dead_letter_stream = dead_letter_stream
         self.consumer_name = f"consumer_{id(self)}"
         self.redis = redis_client
         self.handlers: Dict[str, Callable] = {}
@@ -33,9 +39,9 @@ class StreamConsumer:
         """Start consuming events from the stream"""
         self.running = True
         logger.info(f"Starting stream consumer for {self.stream_name} in group {self.group_name}")
-        
-        try:
-            while self.running:
+
+        while self.running:
+            try:
                 messages = await self.redis.read_stream_group(
                     self.stream_name, 
                     self.group_name, 
@@ -55,7 +61,15 @@ class StreamConsumer:
                                 await self._process_message(message_id, message_data)
                                 message_ids.append(message_id)
                             except Exception as e:
-                                logger.error(f"Failed to process message {message_id}: {e}")
+                                logger.exception("Failed to process message %s", message_id)
+                                try:
+                                    await self._send_to_dead_letter_queue(message_id, message_data, e)
+                                    message_ids.append(message_id)
+                                except Exception:
+                                    logger.exception(
+                                        "Unable to dead-letter message %s; leaving it pending",
+                                        message_id,
+                                    )
                     
                     if message_ids:
                         await self.redis.acknowledge_message(
@@ -65,12 +79,12 @@ class StreamConsumer:
                         )
                 
                 await asyncio.sleep(0.1)
-                
-        except Exception as e:
-            logger.error(f"Error in stream consumer: {e}")
-            if self.running:
-                await asyncio.sleep(5)
-                await self.start_consuming()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Error in stream consumer")
+                if self.running:
+                    await asyncio.sleep(5)
     
     async def stop_consuming(self):
         """Stop consuming events"""
@@ -92,9 +106,25 @@ class StreamConsumer:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse event data: {e}")
+            raise ValueError(f"Invalid event payload: {e}") from e
         except Exception as e:
             logger.error(f"Error processing message {message_id}: {e}")
             raise
+
+    async def _send_to_dead_letter_queue(
+        self, message_id: str, message_data: dict, error: Exception
+    ) -> None:
+        """Preserve unprocessable events before acknowledging them from the source stream."""
+        await self.redis.add_to_stream(
+            self.dead_letter_stream,
+            {
+                "original_stream": self.stream_name,
+                "original_message_id": message_id,
+                "failed_at": datetime.utcnow().isoformat(),
+                "error": str(error),
+                "data": json.dumps(message_data, default=str),
+            },
+        )
 
 class EventProcessor:
     """Example event processor that demonstrates stream consumption"""

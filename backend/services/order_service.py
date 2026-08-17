@@ -9,6 +9,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 class OrderService:
+    ALLOWED_TRANSITIONS = {
+        OrderStatus.PENDING_SOURCE: {
+            OrderStatus.SOURCE_ACCEPTED,
+            OrderStatus.SOURCE_REJECTED,
+            OrderStatus.CANCELLED,
+        },
+        OrderStatus.SOURCE_ACCEPTED: {OrderStatus.BUYER_ACCEPTED, OrderStatus.CANCELLED},
+        OrderStatus.BUYER_ACCEPTED: {OrderStatus.PREPARING, OrderStatus.CANCELLED},
+        OrderStatus.PREPARING: {OrderStatus.READY, OrderStatus.CANCELLED},
+        OrderStatus.READY: {OrderStatus.DISPATCHED, OrderStatus.CANCELLED},
+        OrderStatus.DISPATCHED: {OrderStatus.IN_TRANSIT, OrderStatus.CANCELLED},
+        OrderStatus.IN_TRANSIT: {OrderStatus.DELIVERED, OrderStatus.CANCELLED},
+        OrderStatus.SOURCE_REJECTED: set(),
+        OrderStatus.DELIVERED: set(),
+        OrderStatus.CANCELLED: set(),
+    }
+
     def __init__(self, redis_client, kafka_service=None):
         self.redis = redis_client
         self.kafka = kafka_service
@@ -40,11 +57,13 @@ class OrderService:
         order = await self._get_order(order_id)
         
         if accept:
+            self._validate_transition(order.status, OrderStatus.SOURCE_ACCEPTED)
             order.status = OrderStatus.SOURCE_ACCEPTED
             order.source_notes = notes
             order.estimated_delivery_time = estimated_time or 30
             event_type = "order.source_accepted"
         else:
+            self._validate_transition(order.status, OrderStatus.SOURCE_REJECTED)
             order.status = OrderStatus.SOURCE_REJECTED
             order.source_notes = notes or "Source declined"
             event_type = "order.source_rejected"
@@ -62,9 +81,9 @@ class OrderService:
     
     async def buyer_accept(self, order_id: str, buyer_name: str, delivery_address: str) -> OrderEvent:
         order = await self._get_order(order_id)
-        
         if order.status != OrderStatus.SOURCE_ACCEPTED:
             raise ValueError("Order must be accepted by source first")
+        self._validate_transition(order.status, OrderStatus.BUYER_ACCEPTED)
         
         order.buyer_price = round(order.source_price * (1 + order.markup_percentage / 100), 2)
         order.buyer_name = buyer_name
@@ -84,7 +103,7 @@ class OrderService:
     
     async def dispatch_order(self, order_id: str, driver_name: str) -> OrderEvent:
         order = await self._get_order(order_id)
-        
+        self._validate_transition(order.status, OrderStatus.DISPATCHED)
         order.driver_name = driver_name
         order.status = OrderStatus.DISPATCHED
         order.updated_at = datetime.utcnow()
@@ -101,6 +120,7 @@ class OrderService:
     
     async def update_status(self, order_id: str, status: OrderStatus) -> OrderEvent:
         order = await self._get_order(order_id)
+        self._validate_transition(order.status, status)
         order.status = status
         order.updated_at = datetime.utcnow()
         
@@ -161,6 +181,8 @@ class OrderService:
         )
         
         stream_data = {
+            "event_id": event.event_id,
+            "schema_version": str(event.schema_version),
             "event_type": event.event_type,
             "order_id": event.order.id,
             "timestamp": event.timestamp.isoformat(),
@@ -211,6 +233,13 @@ class OrderService:
     def _generate_correlation_id(self) -> str:
         """Generate a unique correlation ID for event batching"""
         return f"batch-{uuid.uuid4()}"
+
+    @classmethod
+    def _validate_transition(cls, current_status: OrderStatus, new_status: OrderStatus) -> None:
+        if new_status not in cls.ALLOWED_TRANSITIONS[current_status]:
+            raise ValueError(
+                f"Invalid order status transition: {current_status.value} -> {new_status.value}"
+            )
     
     async def dispatch_events(self, events: list[dict], correlation_id: str = None) -> BatchResult:
         """
@@ -239,7 +268,10 @@ class OrderService:
         try:
             for event_data in events:
                 try:
+                    event_data = dict(event_data)
                     event_data['correlation_id'] = correlation_id
+                    event_data.setdefault("event_id", str(uuid.uuid4()))
+                    event_data.setdefault("schema_version", 1)
                     
                     await self.redis.publish(
                         "orders",
@@ -247,6 +279,8 @@ class OrderService:
                     )
                     
                     stream_data = {
+                        "event_id": event_data["event_id"],
+                        "schema_version": str(event_data["schema_version"]),
                         "event_type": event_data.get("event_type", "batch_event"),
                         "correlation_id": correlation_id,
                         "timestamp": datetime.utcnow().isoformat(),

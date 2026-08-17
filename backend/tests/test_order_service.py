@@ -113,6 +113,34 @@ async def test_buyer_accept_without_source_fails(order_service):
             delivery_address="123 Main St"
         )
 
+
+@pytest.mark.asyncio
+async def test_rejects_invalid_order_status_transition(order_service):
+    """Orders cannot skip lifecycle stages or move from a terminal state."""
+    event = await order_service.create_order(
+        Order(source_name="Test Source", item_name="Test Item", source_price=10.0)
+    )
+
+    with pytest.raises(ValueError, match="Invalid order status transition"):
+        await order_service.update_status(event.order.id, OrderStatus.DELIVERED)
+
+    await order_service.source_respond(event.order.id, accept=False)
+    with pytest.raises(ValueError, match="Invalid order status transition"):
+        await order_service.source_respond(event.order.id, accept=True)
+
+
+@pytest.mark.asyncio
+async def test_published_events_include_versioned_envelope(order_service, mock_redis):
+    event = await order_service.create_order(
+        Order(source_name="Test Source", item_name="Test Item", source_price=10.0)
+    )
+
+    stream_entry = mock_redis._streams["orders_stream"][-1][1]
+    assert event.event_id
+    assert event.schema_version == 1
+    assert stream_entry["event_id"] == event.event_id
+    assert stream_entry["schema_version"] == "1"
+
 @pytest.mark.asyncio
 async def test_dispatch_order(order_service):
     """Test dispatching an order"""
